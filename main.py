@@ -139,7 +139,7 @@ def main():
     face_size = (256, 256)
     video_size = (224, 224)
     # Hyperparameters
-    batch_size = 4
+    batch_size = 8
     num_frames = 32
     epochs = 10
     learning_rate = 0.001
@@ -167,7 +167,7 @@ def main():
         psp_model=psp_model,
         content_model=content_model,
         style_dim=512,          # W+ space dimension
-        content_dim=2048,       # ResNet feature dimension
+        content_dim=25,       # ResNet feature dimension
         gru_hidden_size=1024,
         output_dim=512
     )
