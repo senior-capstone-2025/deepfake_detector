@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+
 import time
 # Suppress PyTorch future version warnings
 import warnings
@@ -19,6 +19,8 @@ from utils.load_models import load_psp_encoder, load_resnet_model
 from preprocessor import DeepfakePreprocessor
 from detector import DeepfakeDetector
 from dataset import DeepfakeDataset, create_dataloaders
+from train import train_model
+
 
 def test_pipeline(detector, preprocessor, real_dir, fake_dir, num_frames=8):
     """
@@ -141,7 +143,7 @@ def main():
     # Hyperparameters
     batch_size = 8
     num_frames = 32
-    epochs = 10
+    epochs = 3
     learning_rate = 0.001
 
     print("Creating preprocessor...")
@@ -182,7 +184,23 @@ def main():
         num_frames=num_frames
     )
 
-    test_pipeline(detector, preprocessor, real_dir, fake_dir, num_frames=num_frames)
+    #test_pipeline(detector, preprocessor, real_dir, fake_dir, num_frames=num_frames)
+
+    print("Training deepfake detector...")
+    # Train the deepfake detector
+    train = train_model(
+        detector,
+        train_loader,
+        val_loader,
+        device=device,
+        num_epochs=epochs,
+        lr=learning_rate
+    )
+
+    # Save final model
+    final_model_path = os.path.join(output_dir, 'final_model.pt')
+    torch.save(train.state_dict(), final_model_path)
+    print(f"Training complete. Final model saved to {final_model_path}")
 
 if __name__ == "__main__":
     main()
