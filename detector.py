@@ -44,9 +44,6 @@ class StyleGRU(nn.Module):
 
 
 class StyleAttention(nn.Module):
-    """
-    Simplified Style Attention Module for integrating style and content features
-    """
     def __init__(self, style_dim, content_dim, output_dim=512):
         super(StyleAttention, self).__init__()
         
@@ -55,30 +52,23 @@ class StyleAttention(nn.Module):
         self.value_proj = nn.Linear(style_dim, output_dim)
         self.output_proj = nn.Linear(output_dim, output_dim)
         
-    def forward(self, style_feature, content_feature):
+    def forward(self, style_features, content_features):
         # Project features
-        query = self.query_proj(content_feature)  # [batch_size, output_dim]
-        key = self.key_proj(style_feature)        # [batch_size, output_dim]
-        value = self.value_proj(style_feature)    # [batch_size, output_dim]
-        
-        # Simple dot-product attention 
-        # Reshape for attention calc
-        query = query.unsqueeze(1)  # [batch_size, 1, output_dim]
-        key = key.unsqueeze(2)      # [batch_size, output_dim, 1]
+        query = self.query_proj(content_features)  # [batch_size, output_dim]
+        key = self.key_proj(style_features)        # [batch_size, output_dim]
+        value = self.value_proj(style_features)    # [batch_size, output_dim]
         
         # Compute attention scores
-        attn_scores = torch.bmm(query, key)  # [batch_size, 1, 1]
-        attn_scores = F.softmax(attn_scores, dim=2)  # Still [batch_size, 1, 1]
+        attn_scores = torch.matmul(query, key.t())  # [batch_size, batch_size]
+        attn_scores = F.softmax(attn_scores, dim=1)  # Normalize across batch
         
-        # Apply attention - simpler approach
-        # Scale the style feature by attention score
-        weighted_value = style_feature * attn_scores.squeeze(2).squeeze(1).unsqueeze(1)
+        # Apply attention
+        weighted_value = torch.matmul(attn_scores, value)
         
         # Project to output dimension 
         output = self.output_proj(weighted_value)
         
         return output
-
 
 class DeepfakeDetector(nn.Module):
     """
@@ -88,7 +78,7 @@ class DeepfakeDetector(nn.Module):
                 psp_model,                # Pretrained pSp encoder
                 content_model,            # 3D ResNet for content features
                 style_dim=512,            # StyleGAN latent dimension
-                content_dim=25,         # Content feature dimension from ResNet
+                content_dim=2048,         # Content feature dimension from ResNet
                 gru_hidden_size=1024,     # GRU hidden dimension
                 output_dim=512):          # Output dimension for attention
         super(DeepfakeDetector, self).__init__()
@@ -126,6 +116,25 @@ class DeepfakeDetector(nn.Module):
         self.content_model.eval()
 
         self.print_resnet_structure()
+
+    def preprocess_video(self, video_tensor):
+        """
+        Apply the necessary preprocessing for the PyTorchVideo model
+        """
+        # Expected input: video_tensor with shape [batch_size, C, T, H, W]
+        
+        # Normalize using the correct mean and std for Kinetics dataset
+        mean = torch.tensor([0.45, 0.45, 0.45]).view(1, 3, 1, 1, 1)
+        std = torch.tensor([0.225, 0.225, 0.225]).view(1, 3, 1, 1, 1)
+        
+        # Normalize to [0, 1] first if not already done
+        if video_tensor.max() > 1.0:
+            video_tensor = video_tensor / 255.0
+        
+        # Apply normalization
+        video_tensor = (video_tensor - mean) / std
+        
+        return video_tensor
     
     def print_resnet_structure(self):
         """Print the structure of the 3D ResNet model"""
@@ -184,43 +193,22 @@ class DeepfakeDetector(nn.Module):
         """
         Extract content features using the 3D ResNet model from PyTorchVideo
         """
-        # Expected shape: [batch_size, channels, frames, height, width]
-        batch_size, c, t, h, w = video_frames.shape
+        # Preprocess video frames
+        video_frames = self.preprocess_video(video_frames)
         
         with torch.no_grad():
-            # Extract features from the model before the final classification layer
-            features = None
+            # Get features from the model
+            features = self.content_model(video_frames)
             
-            # Hook to capture features before the final layer
-            def hook_fn(module, input, output):
-                nonlocal features
-                features = input[0]  # Capture the input to the final classification layer
+            # Print the feature shape
+            print(f"Raw features shape: {features.shape}")
             
-            # Register a forward hook on the final classification layer
-            if hasattr(self.content_model, 'blocks') and len(self.content_model.blocks) > 0:
-                final_block = self.content_model.blocks[-1]
-                
-                # Most likely structure is that the final projection is the last layer
-                if hasattr(final_block, 'proj'):
-                    hook = final_block.proj.register_forward_hook(hook_fn)
-                # Or it could be the final norm layer
-                elif hasattr(final_block, 'norm'):
-                    hook = final_block.norm.register_forward_hook(hook_fn)
-            
-            # Forward pass through the model
-            _ = self.content_model(video_frames)
-            
-            # Remove the hook
-            hook.remove()
-            
-            # If we couldn't extract features using the hook, fall back to the model output
-            if features is None:
-                features = self.content_model(video_frames)
-            
-            # If the features still have spatial dimensions, apply pooling
+            # Apply global average pooling if needed
             if len(features.shape) > 2:
-                # Global average pooling over spatial dimensions
-                features = torch.mean(features, dim=list(range(2, len(features.shape))))
+                # If we have spatial dimensions remaining, apply pooling
+                # For SlowFast models, this might be [batch, channels, time, h, w]
+                dims_to_pool = list(range(2, len(features.shape)))
+                features = torch.mean(features, dim=dims_to_pool)
             
             print(f"Content features shape: {features.shape}")
         

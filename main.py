@@ -159,7 +159,7 @@ def main():
     print("Loading pretrained models...")
     # Load the models
     psp_model = load_psp_encoder(psp_path)
-    content_model = load_resnet_model(resnet_path)
+    content_model = load_resnet_model()
     
     print("Creating deepfake detector model...")
     # Initialize the DeepfakeDetector
@@ -167,7 +167,7 @@ def main():
         psp_model=psp_model,
         content_model=content_model,
         style_dim=512,          # W+ space dimension
-        content_dim=25,       # ResNet feature dimension
+        content_dim=2048,       # ResNet feature dimension
         gru_hidden_size=1024,
         output_dim=512
     )

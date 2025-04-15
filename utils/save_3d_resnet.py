@@ -9,6 +9,7 @@ def create_resnet():
         model_num_class=400,  # Kinetics classes, will be removed
         norm=torch.nn.BatchNorm3d,
         activation=torch.nn.ReLU,
+        pretrained=True
     )
 
     # Remove the final classification layer
