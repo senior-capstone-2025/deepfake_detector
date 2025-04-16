@@ -16,9 +16,7 @@ pip install gdown
 # Download the pretrained weights
 gdown 1bMTNWkh5LArlaWSc_wa8VKyq2V42T2z0
 
+# Return to the root directory
 cd ../..
-mkdir models
-mkdir 3d_resnet
-
-# Get 3D ResNet
-python3 save_3d_resnet.py
+# Start training the model
+pytohn3 main.py # add necessary parameters (or just change main())

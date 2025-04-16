@@ -1,9 +1,27 @@
 import torch
 from tqdm import tqdm
+import os
+import time
 
-def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001):
+import logging
+# Create logger
+logger = logging.getLogger(__name__)
+
+def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001, checkpoint_dir='checkpoints'):
     """Train the deepfake detection model"""
     
+    # Log training start information
+    logger.info(f"Begin training model on device: {device}")
+    logger.info(f"Number of epochs: {num_epochs}, Learning rate: {lr}")
+    logger.info(f"Training data: {len(train_loader)} batches")
+    logger.info(f"Validation data: {len(val_loader)} batches")
+    
+    # Create directory for model checkpoints if it doesn't exist
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    
+    # Record start time
+    start_time = time.time()
+
     # Move model to device
     model = model.to(device)
     
@@ -18,6 +36,9 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001
     
     # Training loop
     best_val_loss = float('inf')
+    best_epoch = 0
+
+    logger.info("Starting training loop")
     
     for epoch in range(num_epochs):
         # Training phase
@@ -25,13 +46,21 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001
         train_loss = 0
         train_correct = 0
         train_total = 0
+
+        logger.info(f"Epoch {epoch+1}/{num_epochs} - Training phase started")
         
-        for batch in tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs} - Training'):
+        for batch_idx, batch in enumerate(tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs} - Training')):
+            
             if batch is None:
+                logger.warning(f"Skipping empty batch at index {batch_idx}")
                 continue
                 
             video_batch, face_batch, labels = batch
             
+            # Log batch shapes occasionally (every 50 batches)
+            if batch_idx % 50 == 0:
+                logger.info(f"Batch {batch_idx}: video shape={video_batch.shape}, face shape={face_batch.shape}, labels shape={labels.shape}")
+
             # Move to device
             video_batch = video_batch.to(device)
             face_batch = face_batch.to(device)
@@ -56,20 +85,29 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001
             predictions = (outputs > 0.5).float()
             train_correct += (predictions == labels).sum().item()
             train_total += labels.size(0)
+
+            # Log batch loss occasionally
+            if batch_idx % 50 == 0:
+                logger.info(f"Batch {batch_idx} - Loss: {loss.item():.4f}")
         
         # Calculate average training loss and accuracy
         train_loss = train_loss / train_total
         train_acc = train_correct / train_total
         
+        logger.info(f"Epoch {epoch+1}/{num_epochs} - Training completed: Loss={train_loss:.4f}, Accuracy={train_acc:.4f}")
+
         # Validation phase
         model.eval()
         val_loss = 0
         val_correct = 0
         val_total = 0
         
+        logger.info(f"Epoch {epoch+1}/{num_epochs} - Validation phase started")
+
         with torch.no_grad():
-            for batch in tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs} - Validation'):
+            for batch_idx, batch in enumerate(tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs} - Validation')):
                 if batch is None:
+                    logger.warning(f"Skipping empty validation batch at index {batch_idx}")
                     continue
                     
                 video_batch, face_batch, labels = batch
@@ -96,6 +134,8 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001
         val_loss = val_loss / val_total
         val_acc = val_correct / val_total
         
+        logger.info(f"Epoch {epoch+1}/{num_epochs} - Validation completed: Loss={val_loss:.4f}, Accuracy={val_acc:.4f}")
+
         # Update learning rate
         scheduler.step(val_loss)
         
@@ -104,13 +144,50 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001
               f'Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, '
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}')
         
-        # Save best model
+        # Save checkpoint for every epoch
+        checkpoint_path = os.path.join(checkpoint_dir, f'model_epoch_{epoch+1}.pt')
+        torch.save({
+            'epoch': epoch + 1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'train_loss': train_loss,
+            'val_loss': val_loss,
+            'val_acc': val_acc
+        }, checkpoint_path)
+        logger.info(f"Checkpoint saved at {checkpoint_path}")
+        
+        # Save best model separately
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), 'best_model.pt')
-            print(f'Model saved with validation loss: {val_loss:.4f}')
+            best_epoch = epoch + 1
+            best_model_path = os.path.join(checkpoint_dir, 'best_model.pt')
+            torch.save({
+                'epoch': epoch + 1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'train_loss': train_loss,
+                'val_loss': val_loss,
+                'val_acc': val_acc,
+                'best_epoch': best_epoch
+            }, best_model_path)
+            logger.info(f"New best model saved at {best_model_path} with validation loss: {val_loss:.4f}")
     
     # Load best model
-    model.load_state_dict(torch.load('best_model.pt'))
+    best_model_path = os.path.join(checkpoint_dir, 'best_model.pt')
+    if os.path.exists(best_model_path):
+        best_checkpoint = torch.load(best_model_path)
+        model.load_state_dict(best_checkpoint['model_state_dict'])
+        logger.info(f"Loaded best model from epoch {best_checkpoint['epoch']} with validation loss: {best_checkpoint['val_loss']:.4f}")
+    else:
+        logger.warning(f"Best model path {best_model_path} not found. Using final model.")
     
-    return model
+    # Calculate total training time
+    total_time = time.time() - start_time
+    logger.info(f"Training completed in {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
+    
+    # Return the best model and its metadata
+    return model, {
+        'best_epoch': best_epoch,
+        'best_val_loss': best_val_loss,
+        'training_time': total_time
+    }

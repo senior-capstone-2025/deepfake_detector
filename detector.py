@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torchvision import transforms
-import sys
-import os
-import cv2
 
+import logging
+# Create logger
+logger = logging.getLogger(__name__)
 
 class StyleGRU(nn.Module):
     """
@@ -201,7 +201,7 @@ class DeepfakeDetector(nn.Module):
             features = self.content_model(video_frames)
             
             # Print the feature shape
-            print(f"Raw features shape: {features.shape}")
+            logger.debug(f"Raw features shape: {features.shape}")
             
             # Apply global average pooling if needed
             if len(features.shape) > 2:
@@ -210,7 +210,7 @@ class DeepfakeDetector(nn.Module):
                 dims_to_pool = list(range(2, len(features.shape)))
                 features = torch.mean(features, dim=dims_to_pool)
             
-            print(f"Content features shape: {features.shape}")
+            logger.debug(f"Content features shape: {features.shape}")
         
         return features
     
@@ -231,32 +231,32 @@ class DeepfakeDetector(nn.Module):
 
             # Extract content features
             content_features = self.extract_content_features(video_frames)
-            print(f"Content features shape: {content_features.shape}")
+            logger.debug(f"Content features shape: {content_features.shape}")
             
             # Compute style flow
             style_flow = self.compute_style_flow(face_frames)
-            print(f"Style flow shape: {style_flow.shape}")
+            logger.debug(f"Style flow shape: {style_flow.shape}")
             
             # Process style flow with StyleGRU
             style_features = self.style_gru(style_flow)
-            print(f"Style features shape: {style_features.shape}")
+            logger.debug(f"Style features shape: {style_features.shape}")
             
             # Apply style attention
             attended_features = self.style_attention(style_features, content_features)
-            print(f"Attended features shape: {attended_features.shape}")
+            logger.debug(f"Attended features shape: {attended_features.shape}")
             
             # Concatenate with content features for final classification
             combined_features = torch.cat([attended_features, content_features], dim=1)
-            print(f"Combined features shape: {combined_features.shape}")
+            logger.debug(f"Combined features shape: {combined_features.shape}")
             
             # Final classification
             output = self.classifier(combined_features)
-            print(f"Output shape: {output.shape}")
+            logger.debug(f"Output shape: {output.shape}")
             
             return output
         
         except Exception as e:
-            print(f"Error in forward pass: {e}")
+            logger.error(f"Error in forward pass: {e}")
             import traceback
             traceback.print_exc()
             raise e
