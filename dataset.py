@@ -5,6 +5,9 @@ from torch.utils.data import Dataset, DataLoader
 import cv2
 from preprocessor import DeepfakePreprocessor
 
+import logging
+logger = logging.getLogger(__name__)
+
 class DeepfakeDataset(Dataset):
     def __init__(self, video_paths, labels, preprocessor, num_frames=32):
         """
@@ -69,10 +72,8 @@ def create_dataloaders(real_dir, fake_dir, preprocessor, batch_size=8, num_frame
             video_paths.append(os.path.join(fake_dir, filename))
             labels.append(1)  # 1 = fake
 
-    print("Total videos collected:", len(video_paths))
-    print("Total labels collected:", len(labels))
-    for i in range(len(labels)):
-        print(f"Label for video {i}: {labels[i]}")
+    logger.info(f"Total videos collected: {len(video_paths)}")
+    logger.info(f"Total labels collected: {len(labels)}")
     
     # Shuffle and split into train/val
     indices = list(range(len(video_paths)))
