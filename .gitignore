@@ -2,3 +2,5 @@ models/
 pixel2style2pixel/
 results/
 checkpoints/
+__pycache__/
+*.pyc
