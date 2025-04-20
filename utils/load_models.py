@@ -1,8 +1,17 @@
+## file: load_models.py
+#
+# Utility functions to load pretrained models.
+#
+##
+
 import torch
 from argparse import Namespace
-import pprint
 import torchvision.transforms as transforms
 import pytorchvideo.models.resnet as resnet
+
+# Setup logging
+import logging
+logger = logging.getLogger(__name__)
 
 # Import pSp model
 from pixel2style2pixel.models.psp import pSp
@@ -16,7 +25,6 @@ def load_psp_encoder(model_path, device):
     
     # Get the options used for training
     opts = ckpt['opts']
-    pprint.pprint(opts)
 
     # Update the options
     opts['checkpoint_path'] = model_path
@@ -25,7 +33,7 @@ def load_psp_encoder(model_path, device):
     if 'output_size' not in opts:
         opts['output_size'] = 1024
     
-     # Force CPU mode regardless of what's in the checkpoint
+    # Set the device
     opts['device'] = device
 
     # Convert to Namespace
@@ -35,8 +43,7 @@ def load_psp_encoder(model_path, device):
     net = pSp(opts)
     net.eval()  # Set to evaluation mode
     
-    
-    print('pSp model successfully loaded!')
+    logger.info("Pretrained pSp model loaded successfully.")
     
     return net
 
@@ -67,12 +74,12 @@ def load_resnet_module():
         feature_extractor = FeatureExtractor(model)
         feature_extractor.eval()
         
-        print('3D ResNet model successfully loaded!')
+        logger.info("Pretrained 3D ResNet model loaded successfully.")
         return feature_extractor
         
     except Exception as e:
-        print(f"Error loading PyTorchVideo model: {e}")
-        print("Falling back to 2D ResNet")
+        logger.warning(f"Error loading PyTorchVideo model: {e}")
+        logger.warning("Falling back to 2D ResNet.")
         
         # Fallback to 2D ResNet
         import torchvision.models as models
@@ -81,5 +88,6 @@ def load_resnet_module():
         model = torch.nn.Sequential(*list(resnet.children())[:-1])
         model.eval()
         
+        logger.info("Pretrained 2D ResNet model loaded successfully.")
         return model
     

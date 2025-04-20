@@ -1,11 +1,21 @@
+## file: preprocessor.py
+#
+# DeepfakePreprocessor :
+# Preprocessing tasks for converting videos to tensors.
+#
+##
+
 import os
 import cv2
 import numpy as np
 import torch
 from torchvision import transforms
 from tqdm import tqdm
-import argparse
 from facenet_pytorch import MTCNN
+
+# Setup logging
+import logging
+logger = logging.getLogger(__name__)
 
 class DeepfakePreprocessor:
     """
@@ -77,7 +87,7 @@ class DeepfakePreprocessor:
             return face_img
             
         except Exception as e:
-            print(f"Face detection error: {e}")
+            logger.warning(f"Face detection error: {e}")
             # Fall back to center crop
             h, w = frame.shape[:2]
             min_dim = min(h, w)
@@ -93,7 +103,7 @@ class DeepfakePreprocessor:
         Process video file to extract frames and faces
         """
         if not os.path.exists(video_path):
-            print(f"Video file not found: {video_path}")
+            logger.warning(f"Video file not found: {video_path}")
             return None, None
         
         # Create output directory if specified
@@ -108,7 +118,7 @@ class DeepfakePreprocessor:
         cap = cv2.VideoCapture(video_path)
         
         if not cap.isOpened():
-            print(f"Error opening video file: {video_path}")
+            logger.warning(f"Error opening video file: {video_path}")
             return None, None
         
         # Get video properties
@@ -117,7 +127,7 @@ class DeepfakePreprocessor:
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
-        print(f"Video: {os.path.basename(video_path)}, {width}x{height}, {fps} fps, {total_frames} frames")
+        logger.debug(f"Video: {os.path.basename(video_path)}, {width}x{height}, {fps} fps, {total_frames} frames")
         
         # Calculate frame indices to sample
         if total_frames <= num_frames:
@@ -131,13 +141,13 @@ class DeepfakePreprocessor:
         faces = []
         
         # Process frames
-        for i in tqdm(indices, desc="Processing frames"):
+        for i in indices:
             # Set position
             cap.set(cv2.CAP_PROP_POS_FRAMES, i)
             ret, frame = cap.read()
             
             if not ret:
-                print(f"Error reading frame {i}")
+                logger.warning(f"Error reading frame {i}")
                 # If frame reading fails, duplicate last frame or use blank
                 if frames:
                     frame = frames[-1].copy()
@@ -179,7 +189,7 @@ class DeepfakePreprocessor:
             
             return video_tensor, face_tensor
         else:
-            print(f"Failed to extract frames from {video_path}")
+            logger.warning(f"Failed to extract frames from {video_path}")
             return None, None
     
     def process_directory(self, input_dir, output_dir=None, num_frames=32, save_frames=False):
@@ -187,7 +197,7 @@ class DeepfakePreprocessor:
         Process all videos in a directory
         """
         if not os.path.exists(input_dir):
-            print(f"Directory not found: {input_dir}")
+            logger.warning(f"Directory not found: {input_dir}")
             return {}
         
         results = {}
@@ -234,60 +244,5 @@ class DeepfakePreprocessor:
                 'face': data['face_tensor']
             }, output_path)
             
-        print(f"Saved {len(tensors_dict)} processed videos to {output_dir}")
+        logger.info(f"Saved {len(tensors_dict)} processed videos to {output_dir}")
 
-
-def main():
-    parser = argparse.ArgumentParser(description='Preprocess videos for deepfake detection')
-    parser.add_argument('--input', type=str, required=True, help='Input video file or directory')
-    parser.add_argument('--output', type=str, default=None, help='Output directory for processed data')
-    parser.add_argument('--frames', type=int, default=32, help='Number of frames to extract per video')
-    parser.add_argument('--save_frames', action='store_true', help='Save extracted frames as images')
-    parser.add_argument('--save_tensors', action='store_true', help='Save processed tensors')
-    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
-                       help='Device to use (cuda/cpu)')
-    
-    args = parser.parse_args()
-    
-    # Initialize preprocessor
-    preprocessor = DeepfakePreprocessor(
-        face_size=(256, 256),
-        video_size=(224, 224),
-        device=args.device
-    )
-    
-    # Process input
-    if os.path.isfile(args.input):
-        # Process single video
-        video_tensor, face_tensor = preprocessor.process_video(
-            args.input, 
-            args.output, 
-            args.frames, 
-            args.save_frames
-        )
-        
-        if args.save_tensors and args.output and video_tensor is not None:
-            tensors_dict = {os.path.basename(args.input): {
-                'video_tensor': video_tensor,
-                'face_tensor': face_tensor
-            }}
-            preprocessor.save_tensors(tensors_dict, args.output)
-            
-    elif os.path.isdir(args.input):
-        # Process directory of videos
-        tensors_dict = preprocessor.process_directory(
-            args.input, 
-            args.output, 
-            args.frames, 
-            args.save_frames
-        )
-        
-        if args.save_tensors and args.output:
-            preprocessor.save_tensors(tensors_dict, args.output)
-    
-    else:
-        print(f"Input path not found: {args.input}")
-
-
-if __name__ == "__main__":
-    main()

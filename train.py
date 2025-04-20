@@ -1,3 +1,9 @@
+## file: train.py
+#
+# Main training script.
+#
+##
+
 import torch
 from tqdm import tqdm
 import os
@@ -31,7 +37,7 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001
     
     # Learning rate scheduler
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=3, verbose=True
+        optimizer, mode='min', factor=0.5, patience=3
     )
     
     # Training loop

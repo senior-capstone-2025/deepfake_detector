@@ -1,5 +1,8 @@
-# Main script for the Deepfake Detector
-# Executes primary training loop
+## file: main.py
+#
+# Main training script for deepfake detector.
+#
+##
 
 import time
 import logging
@@ -41,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 def main():
 
-    logger.info("Starting main function.")
+    logger.info("Starting main training loop.")
 
     # Argument parser to handle device selection
     parser = argparse.ArgumentParser(description='Train deepfake detection model')
@@ -75,10 +78,16 @@ def main():
     face_size = (256, 256)
     video_size = (224, 224)
     # Hyperparameters
-    batch_size = 8
+    batch_size = 64
     num_frames = 32
     epochs = 2
     learning_rate = 0.001
+
+    logger.info("Using device: %s", device)
+    logger.info("Batch size: %d", batch_size)
+    logger.info("Number of frames: %d", num_frames)
+    logger.info("Number of epochs: %d", epochs)
+    logger.info("Learning rate: %.4f", learning_rate)
 
     # Initialize the video preprocessor
     logger.info("Creating preprocessor.")
@@ -93,34 +102,36 @@ def main():
     os.makedirs(checkpoint_dir, exist_ok=True)
 
     # Load the pretrained pSp encoder and 3D ResNet model
-    print("Loading pretrained models...")
+    logger.info("Loading pretrained pSp encoder and 3D ResNet model.")
     psp_model = load_psp_encoder(psp_path, device)
     content_model = load_resnet_module()
     
     # Initialize the DeepfakeDetector with loaded models and hyperparameters
-    print("Creating deepfake detector model...")
+    logger.info("Creating DeepfakeDetector model.")
     detector = DeepfakeDetector(
         psp_model=psp_model,
         content_model=content_model,
-        style_dim=512,          # W+ space dimension
+        style_dim=512,          # W+ space dimension (only one layer of pSp style)
         content_dim=2048,       # ResNet feature dimension
         gru_hidden_size=1024,
         output_dim=512
     )
 
     # Create dataloaders for training and validation
-    # The preprocessor will transform the videos into tensors
-    print("Creating dataloaders...")
+    # The preprocessor will transform the videos into tensors on the first pass
+    # and cache them for subsequent passes.
+    logger.info("Creating traing/validation dataloaders.")
     train_loader, val_loader = create_dataloaders(
         real_dir,
         fake_dir,
         preprocessor,
         batch_size=batch_size,
-        num_frames=num_frames
+        num_frames=num_frames,
+        cache_dir='preprocessed_cache'
     )
 
     # Train the deepfake detector
-    print("Training deepfake detector...")
+    logger.info("Begin training.")
     trained_model, training_metadata = train_model(
         detector,
         train_loader,
@@ -144,10 +155,10 @@ def main():
         'best_val_loss': training_metadata['best_val_loss'],
         'training_time_seconds': training_metadata['training_time']
     }, final_model_path)
-    
-    print(f"Training complete. Final model saved to {final_model_path}")
-    print(f"Best model was from epoch {training_metadata['best_epoch']} with validation loss: {training_metadata['best_val_loss']:.4f}")
-    print(f"Total training time: {training_metadata['training_time']/60:.2f} minutes")
+
+    logger.info(f"Training complete. Final model saved to {final_model_path}")
+    logger.info(f"Best model was from epoch {training_metadata['best_epoch']} with validation loss: {training_metadata['best_val_loss']:.4f}")
+    logger.info(f"Total training time: {training_metadata['training_time']/60:.2f} minutes")
 
 if __name__ == "__main__":
     main()

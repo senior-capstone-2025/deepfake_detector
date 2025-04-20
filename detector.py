@@ -1,11 +1,20 @@
+## file: detector.py
+#
+# DeepfakeDetector :
+# Core model implementation. 
+# Extracts and merges style and content features.
+# Uses simple classification head for final prediction.
+#
+##
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torchvision import transforms
 
+# Setup logging
 import logging
-# Create logger
 logger = logging.getLogger(__name__)
 
 class StyleGRU(nn.Module):
@@ -115,7 +124,6 @@ class DeepfakeDetector(nn.Module):
         self.psp_encoder.eval()
         self.content_model.eval()
 
-        self.print_resnet_structure()
 
     def preprocess_video(self, video_tensor):
         """
@@ -136,20 +144,6 @@ class DeepfakeDetector(nn.Module):
         
         return video_tensor
     
-    def print_resnet_structure(self):
-        """Print the structure of the 3D ResNet model"""
-        print("\nRESNET MODEL STRUCTURE:")
-        for name, module in self.content_model.named_children():
-            print(f"- {name}: {type(module)}")
-        
-        # Try a simple forward pass with a random tensor
-        test_input = torch.randn(1, 3, 32, 224, 224)  # Same shape as your videos
-        with torch.no_grad():
-            try:
-                output = self.content_model(test_input)
-                print(f"Test output shape: {output.shape}")
-            except Exception as e:
-                print(f"Error in forward pass: {e}")
     def compute_style_flow(self, face_frames):
         """
         Extract style latent vectors and compute style flow using only one latent level
@@ -178,7 +172,7 @@ class DeepfakeDetector(nn.Module):
         # Stack latent codes along sequence dimension
         # Shape becomes [batch_size, seq_len, 512]
         latent_codes = torch.stack(latent_codes, dim=1)
-        print(f"Latent codes shape: {latent_codes.shape}")
+        logger.debug(f"Latent codes shape: {latent_codes.shape}")
         
         # Compute style flow (differences between consecutive frames)
         if seq_len > 1:
@@ -224,8 +218,8 @@ class DeepfakeDetector(nn.Module):
         """
 
         # Check shapes
-        print(f"Video frames shape: {video_frames.shape}")
-        print(f"Face frames shape: {face_frames.shape}")
+        logger.debug(f"Video frames shape: {video_frames.shape}")
+        logger.debug(f"Face frames shape: {face_frames.shape}")
 
         try:
 

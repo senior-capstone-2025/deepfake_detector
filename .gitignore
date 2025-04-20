@@ -2,5 +2,10 @@ models/
 pixel2style2pixel/
 results/
 checkpoints/
+*.pkl
+*.pth
+*.pt
 __pycache__/
 *.pyc
+videos/
+preprocessed_cache/
