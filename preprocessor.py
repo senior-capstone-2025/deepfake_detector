@@ -24,11 +24,18 @@ class DeepfakePreprocessor:
                  face_size=(256, 256), 
                  video_size=(224, 224), 
                  device='cuda' if torch.cuda.is_available() else 'cpu',
+                 content_model=None,
                  psp_model=None):
         self.face_size = face_size
         self.video_size = video_size
         self.device = device
+        self.content_model = content_model
         self.psp_model = psp_model
+        
+
+        # Load content model if provided
+        if self.content_model is not None:
+            self.content_model.eval()
 
         # Load PSP model if provided
         if self.psp_model is not None:
@@ -114,9 +121,6 @@ class DeepfakePreprocessor:
         Returns:
             Style codes tensor [T, 512]
         """
-        if self.psp_model is None:
-            logger.warning("PSP model not provided, cannot extract style codes")
-            return None
             
         seq_len = face_tensor.shape[0]
         style_codes = []
@@ -139,7 +143,41 @@ class DeepfakePreprocessor:
         if style_codes:
             return torch.stack(style_codes, dim=0)  # [T, 512]
         else:
+            logger.warning("No style codes extracted, returning None")
             return None
+        
+    def extract_content_features(self, video_tensor):
+        """
+        Extract content features using the 3D ResNet model from PyTorchVideo
+        """
+        
+        with torch.no_grad():
+            # Add batch dimension if it's missing
+            if len(video_tensor.shape) == 4:  # [C, T, H, W]
+                video_tensor = video_tensor.unsqueeze(0)  # [1, C, T, H, W]
+            
+            # Move tensor to device
+            video_tensor = video_tensor.to(self.device)
+            
+            # Get features from the model
+            content_features = self.content_model(video_tensor)
+            
+            # Print the feature shape
+            logger.debug(f"Raw features shape: {content_features.shape}")
+            
+            # Apply global average pooling if needed
+            if len(content_features.shape) > 2:
+                # If we have spatial dimensions remaining, apply pooling
+                # For SlowFast models, this might be [batch, channels, time, h, w]
+                dims_to_pool = list(range(2, len(content_features.shape)))
+                content_features = torch.mean(content_features, dim=dims_to_pool)
+            
+            # Remove batch dimension and move back to CPU
+            content_features = content_features.squeeze(0).cpu()
+            
+            logger.debug(f"Content features shape: {content_features.shape}")
+        
+        return content_features
 
     def process_video(self, video_path, output_dir=None, num_frames=32, save_frames=False):
         """
@@ -227,18 +265,20 @@ class DeepfakePreprocessor:
             video_tensor = torch.stack(frames, dim=0)  # [T, C, H, W]
             face_tensor = torch.stack(faces, dim=0)    # [T, C, H, W]
             
+            # Reformat video tensor for 3D ResNet
+            video_tensor = video_tensor.permute(1, 0, 2, 3)  # [C, T, H, W]
+            # Extract content features
+            content_features = self.extract_content_features(video_tensor)
+
             # Extract style codes if PSP model is provided
             style_codes = None
             if self.psp_model is not None:
                 style_codes = self.extract_style_codes(face_tensor)
-            
-            # Reformat video tensor for 3D ResNet
-            video_tensor = video_tensor.permute(1, 0, 2, 3)  # [C, T, H, W]
-            
-            return video_tensor, face_tensor, style_codes
+
+            return content_features, style_codes
         else:
             logger.warning(f"Failed to extract frames from {video_path}")
-            return None, None, None
+            return None, None
     
     def process_directory(self, input_dir, output_dir=None, num_frames=32, save_frames=False):
         """

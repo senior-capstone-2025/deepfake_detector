@@ -61,32 +61,22 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001
                 logger.warning(f"Skipping empty batch at index {batch_idx}")
                 continue
                 
-            # Unpack batch data - handle both old and new formats
-            if len(batch) == 4:  # New format with style codes
-                video_batch, face_batch, style_codes_batch, labels = batch
-            else:  # Old format without style codes
-                video_batch, face_batch, labels = batch
-                style_codes_batch = None
+            content_features_batch, style_codes_batch, labels = batch
             
             # Log batch shapes occasionally (every 50 batches)
             if batch_idx % 50 == 0:
-                logger.debug(f"Batch {batch_idx}: video shape={video_batch.shape}, face shape={face_batch.shape}, labels shape={labels.shape}")
+                logger.debug(f"Batch {batch_idx}: video shape={content_features_batch.shape}, labels shape={labels.shape}")
 
             # Move to device
-            video_batch = video_batch.to(device)
-            face_batch = face_batch.to(device)
+            content_features_batch = content_features_batch.to(device)
+            style_codes_batch = style_codes_batch.to(device)
             labels = labels.to(device)
-            if style_codes_batch is not None:
-                style_codes_batch = style_codes_batch.to(device)
             
             # Forward pass
             optimizer.zero_grad()
-            outputs = model(video_batch, face_batch, style_codes_batch)
+            outputs = model(content_features_batch, style_codes_batch)
             
-            # The outputs should be of shape [batch_size, 1]
-            # The labels should be of shape [batch_size]
-            # Make sure dimensions match for loss calculation
-            outputs = outputs.squeeze(1)  # [batch_size]
+            outputs = outputs.squeeze(1)
             
             # Compute loss
             loss = criterion(outputs, labels)
@@ -94,7 +84,7 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001
             optimizer.step()
             
             # Update statistics
-            train_loss += loss.item() * video_batch.size(0)
+            train_loss += loss.item() * content_features_batch.size(0)
             predictions = (outputs > 0.5).float()
             train_correct += (predictions == labels).sum().item()
             train_total += labels.size(0)
@@ -123,23 +113,22 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, lr=0.001
                     logger.warning(f"Skipping empty validation batch at index {batch_idx}")
                     continue
                     
-                video_batch, face_batch, style_codes_batch, labels = batch
+                content_features_batch, style_codes_batch, labels = batch
                 
                 # Move to device
-                video_batch = video_batch.to(device)
-                face_batch = face_batch.to(device)
-                style_code_batch = style_codes_batch.to(device)
+                content_features_batch = content_features_batch.to(device)
+                style_codes_batch = style_codes_batch.to(device)
                 labels = labels.to(device)
                 
                 # Forward pass
-                outputs = model(video_batch, face_batch, style_codes_batch)
+                outputs = model(content_features_batch, style_codes_batch)
                 outputs = outputs.squeeze(1)
                 
                 # Calculate loss
                 loss = criterion(outputs, labels)
                 
                 # Update statistics
-                val_loss += loss.item() * video_batch.size(0)
+                val_loss += loss.item() * content_features_batch.size(0)
                 predictions = (outputs > 0.5).float()
                 val_correct += (predictions == labels).sum().item()
                 val_total += labels.size(0)

@@ -57,7 +57,7 @@ def preprocess_video_directory(
             try:
                 # Quick check for valid cache file
                 cached_data = torch.load(cache_path)
-                if isinstance(cached_data, tuple) and len(cached_data) == 4:
+                if isinstance(cached_data, tuple) and len(cached_data) == 3:
                     video_info.append((cache_path, label, True))
                     continue
             except Exception as e:
@@ -65,23 +65,23 @@ def preprocess_video_directory(
         
         # Process video
         try:
-            video_tensor, face_tensor, style_codes = preprocessor.process_video(
+            content_features, style_codes = preprocessor.process_video(
                 video_path, num_frames=num_frames
             )
             
-            if video_tensor is not None and face_tensor is not None:
+            if content_features is not None and style_codes is not None:
                 # Save to cache
-                torch.save((video_tensor, face_tensor, style_codes, True), cache_path)
+                torch.save((content_features, style_codes, True), cache_path)
                 video_info.append((cache_path, label, True))
             else:
                 # Mark as invalid
-                torch.save((None, None, None, False), cache_path)
+                torch.save((None, None, False), cache_path)
                 video_info.append((cache_path, label, False))
                 logger.warning(f"Failed to process video: {video_path}")
         except Exception as e:
             logger.error(f"Error processing {video_path}: {e}")
             # Save as invalid
-            torch.save((None, None, None, False), cache_path)
+            torch.save((None, None, False), cache_path)
             video_info.append((cache_path, label, False))
     
     return video_info

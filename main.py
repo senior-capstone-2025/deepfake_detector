@@ -91,6 +91,9 @@ def main():
     logger.info("Loading pretrained pSp encoder and 3D ResNet model.")
     psp_path = "pixel2style2pixel/pretrained_models/psp_ffhq_encode.pt"
     psp_model = load_psp_encoder(psp_path, args.device)
+    # Load the 3D ResNet model for content feature extraction
+    logger.info("Loading 3D ResNet model.")
+    content_model = load_resnet_module()
 
     # Initialize the video preprocessor
     logger.info("Creating preprocessor.")
@@ -98,6 +101,7 @@ def main():
         face_size=face_size,
         video_size=video_size,
         device=args.device,
+        content_model=content_model,
         psp_model=psp_model
     )
 
@@ -123,14 +127,13 @@ def main():
         batch_size=batch_size
     )
 
-    # Load the 3D ResNet model for content feature extraction
-    logger.info("Loading 3D ResNet model.")
-    content_model = load_resnet_module()
+    
     
 
     # Initialize the DeepfakeDetector with loaded models and hyperparameters
     logger.info("Creating DeepfakeDetector model.")
     detector = DeepfakeDetector(
+        device=args.device,
         psp_model=psp_model,
         content_model=content_model,
         style_dim=512,          # W+ space dimension (only one layer of pSp style)

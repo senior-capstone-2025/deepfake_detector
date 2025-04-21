@@ -34,17 +34,11 @@ class CachedDeepfakeDataset(Dataset):
                 # Load cached tensors
                 cached_data = torch.load(cache_path)
 
-                # Check if style codes are present
-                if len(cached_data) == 4:
-                    video_tensor, face_tensor, style_codes, _ = cached_data
-                else:
-                    video_tensor, face_tensor, _ = cached_data
-                    style_codes = None
+                video_tensor, style_codes, _ = cached_data
 
-                if video_tensor is not None and face_tensor is not None:
+                if video_tensor is not None and style_codes is not None:
                     return (
                         video_tensor,
-                        face_tensor,
                         style_codes,
                         torch.tensor(label, dtype=torch.float32),
                         True
@@ -57,7 +51,6 @@ class CachedDeepfakeDataset(Dataset):
         logger.warning(f"Invalid sample at index {idx}, returning empty tensors.")
         return (
             torch.zeros((3, 32, 224, 224)),  # Default shape for video tensor
-            torch.zeros((32, 3, 256, 256)),  # Default shape for face tensor
             None,  # No style codes
             torch.tensor(label, dtype=torch.float32),
             False
@@ -127,15 +120,13 @@ def collate_with_filter(batch):
         return None
     
     # Separate the components
-    video_tensors = [item[0] for item in valid_samples]
-    face_tensors = [item[1] for item in valid_samples]
-    style_codes = [item[2] for item in valid_samples]
-    labels = [item[3] for item in valid_samples]
+    content_features = [item[0] for item in valid_samples]
+    style_codes = [item[1] for item in valid_samples]
+    labels = [item[2] for item in valid_samples]
     
     # Stack into batches
-    video_batch = torch.stack(video_tensors)
-    face_batch = torch.stack(face_tensors)
+    content_features_batch = torch.stack(content_features)
     style_codes_batch = torch.stack(style_codes)
     label_batch = torch.stack(labels)
     
-    return video_batch, face_batch, style_codes_batch, label_batch
+    return content_features_batch, style_codes_batch, label_batch
