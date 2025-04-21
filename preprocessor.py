@@ -12,9 +12,8 @@ import torch
 from torchvision import transforms
 from tqdm import tqdm
 from facenet_pytorch import MTCNN
-
-# Setup logging
 import logging
+
 logger = logging.getLogger(__name__)
 
 class DeepfakePreprocessor:
@@ -24,10 +23,16 @@ class DeepfakePreprocessor:
     def __init__(self, 
                  face_size=(256, 256), 
                  video_size=(224, 224), 
-                 device='cuda' if torch.cuda.is_available() else 'cpu'):
+                 device='cuda' if torch.cuda.is_available() else 'cpu',
+                 psp_model=None):
         self.face_size = face_size
         self.video_size = video_size
         self.device = device
+        self.psp_model = psp_model
+
+        # Load PSP model if provided
+        if self.psp_model is not None:
+            self.psp_model.eval()
         
         # Initialize face detector (MTCNN)
         self.face_detector = MTCNN(
@@ -43,11 +48,12 @@ class DeepfakePreprocessor:
             transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])  # StyleGAN normalization
         ])
         
+        # Use Kinetics dataset normalization for video frames (for 3D ResNet)
         self.video_transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize([0.43, 0.42, 0.39], [0.27, 0.26, 0.27])  # Kinetics stats
+            transforms.Normalize([0.45, 0.45, 0.45], [0.225, 0.225, 0.225])  # Kinetics stats (updated)
         ])
-    
+
     def _extract_face(self, frame):
         """
         Extract face from a single frame using MTCNN
@@ -98,6 +104,43 @@ class DeepfakePreprocessor:
             
             return face_img
     
+    def extract_style_codes(self, face_tensor):
+        """
+        Extract style latent vectors from face frames
+        
+        Args:
+            face_tensor: Face frames tensor [T, C, H, W]
+            
+        Returns:
+            Style codes tensor [T, 512]
+        """
+        if self.psp_model is None:
+            logger.warning("PSP model not provided, cannot extract style codes")
+            return None
+            
+        seq_len = face_tensor.shape[0]
+        style_codes = []
+        
+        with torch.no_grad():
+            for i in range(seq_len):
+                # Extract a single frame
+                frame = face_tensor[i].unsqueeze(0).to(self.device)  # [1, C, H, W]
+                
+                # Extract style latent vector using only the encoder
+                codes = self.psp_model.encoder(frame)
+                
+                # Use only one latent level (e.g., level 9 which is in the middle)
+                level_idx = 9
+                codes = codes[:, level_idx, :]  # Shape [1, 512]
+                
+                style_codes.append(codes.cpu().squeeze(0))
+        
+        # Stack style codes along sequence dimension
+        if style_codes:
+            return torch.stack(style_codes, dim=0)  # [T, 512]
+        else:
+            return None
+
     def process_video(self, video_path, output_dir=None, num_frames=32, save_frames=False):
         """
         Process video file to extract frames and faces
@@ -179,18 +222,23 @@ class DeepfakePreprocessor:
         
         cap.release()
         
-                    # Stack into tensor
+        # Stack into tensor
         if frames and faces:
             video_tensor = torch.stack(frames, dim=0)  # [T, C, H, W]
             face_tensor = torch.stack(faces, dim=0)    # [T, C, H, W]
             
+            # Extract style codes if PSP model is provided
+            style_codes = None
+            if self.psp_model is not None:
+                style_codes = self.extract_style_codes(face_tensor)
+            
             # Reformat video tensor for 3D ResNet
             video_tensor = video_tensor.permute(1, 0, 2, 3)  # [C, T, H, W]
             
-            return video_tensor, face_tensor
+            return video_tensor, face_tensor, style_codes
         else:
             logger.warning(f"Failed to extract frames from {video_path}")
-            return None, None
+            return None, None, None
     
     def process_directory(self, input_dir, output_dir=None, num_frames=32, save_frames=False):
         """

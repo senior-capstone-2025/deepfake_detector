@@ -31,6 +31,7 @@ pixel2style2pixel_path = os.path.join(os.path.dirname(os.path.abspath(__file__))
 sys.path.append(pixel2style2pixel_path)
 
 # Import necessary utility functions
+from preprocess import preprocess_all_videos
 from utils.load_models import load_psp_encoder, load_resnet_module
 
 # Import custom modules
@@ -58,54 +59,75 @@ def main():
     parser.add_argument('--output_dir', type=str, default='results', help='Directory to save results')
     # Add checkpoint directory argument
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints', help='Directory to save checkpoints')
-    
+    # Cache directory
+    parser.add_argument('--cache_dir', type=str, default='preprocessed_cache', help='Directory for preprocessed data')
+    # Force reprocessing
+    parser.add_argument('--force_reprocess', action='store_true', help='Force reprocessing of all videos')
+   
     args = parser.parse_args()
 
     logger.info("Arguments parsed: %s", args)
 
-    # Paths to video files
-    real_dir = args.real_dir
-    fake_dir = args.fake_dir
-    # Paths to pretrained pSp encoder and 3D ResNet
-    psp_path = "pixel2style2pixel/pretrained_models/psp_ffhq_encode.pt"
-    # Output directory for results
-    output_dir = args.output_dir
-    # Checkpoint directory
-    checkpoint_dir = args.checkpoint_dir
-    # Device configuration (cuda/cpu)
-    device = args.device
     # Video sizes
     face_size = (256, 256)
     video_size = (224, 224)
+
     # Hyperparameters
     batch_size = 64
     num_frames = 32
     epochs = 2
     learning_rate = 0.001
 
-    logger.info("Using device: %s", device)
-    logger.info("Batch size: %d", batch_size)
-    logger.info("Number of frames: %d", num_frames)
-    logger.info("Number of epochs: %d", epochs)
-    logger.info("Learning rate: %.4f", learning_rate)
+    # Create output directories if they don't exist
+    os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(args.checkpoint_dir, exist_ok=True)
+    os.makedirs(args.cache_dir, exist_ok=True)
+
+    logger.info("Using device: %s", args.device)
+    logger.info("Hyperparameters: batch_size=%d, num_frames=%d, epochs=%d, lr=%.4f", 
+               batch_size, num_frames, epochs, learning_rate)
+
+    # Load the pretrained pSp encoder
+    logger.info("Loading pretrained pSp encoder and 3D ResNet model.")
+    psp_path = "pixel2style2pixel/pretrained_models/psp_ffhq_encode.pt"
+    psp_model = load_psp_encoder(psp_path, args.device)
 
     # Initialize the video preprocessor
     logger.info("Creating preprocessor.")
     preprocessor = DeepfakePreprocessor(
         face_size=face_size,
         video_size=video_size,
-        device=device
+        device=args.device,
+        psp_model=psp_model
     )
 
-    # Create output directories if they don't exist
-    os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(checkpoint_dir, exist_ok=True)
 
-    # Load the pretrained pSp encoder and 3D ResNet model
-    logger.info("Loading pretrained pSp encoder and 3D ResNet model.")
-    psp_model = load_psp_encoder(psp_path, device)
+    # Preprocess all videos in the specified directories
+    logger.info("Starting video preprocessing...")
+    video_info = preprocess_all_videos(
+        args.real_dir,
+        args.fake_dir,
+        preprocessor,
+        args.cache_dir,
+        num_frames=num_frames,
+        force_reprocess=args.force_reprocess
+    )
+
+
+    # Create dataloaders for training and validation
+    # The preprocessor will transform the videos into tensors on the first pass
+    # and cache them for subsequent passes.
+    logger.info("Creating traing/validation dataloaders.")
+    train_loader, val_loader = create_dataloaders(
+        video_info,
+        batch_size=batch_size
+    )
+
+    # Load the 3D ResNet model for content feature extraction
+    logger.info("Loading 3D ResNet model.")
     content_model = load_resnet_module()
     
+
     # Initialize the DeepfakeDetector with loaded models and hyperparameters
     logger.info("Creating DeepfakeDetector model.")
     detector = DeepfakeDetector(
@@ -117,33 +139,21 @@ def main():
         output_dim=512
     )
 
-    # Create dataloaders for training and validation
-    # The preprocessor will transform the videos into tensors on the first pass
-    # and cache them for subsequent passes.
-    logger.info("Creating traing/validation dataloaders.")
-    train_loader, val_loader = create_dataloaders(
-        real_dir,
-        fake_dir,
-        preprocessor,
-        batch_size=batch_size,
-        num_frames=num_frames,
-        cache_dir='preprocessed_cache'
-    )
-
+    
     # Train the deepfake detector
     logger.info("Begin training.")
     trained_model, training_metadata = train_model(
         detector,
         train_loader,
         val_loader,
-        device=device,
+        device=args.device,
         num_epochs=epochs,
         lr=learning_rate,
-        checkpoint_dir=checkpoint_dir
+        checkpoint_dir=args.checkpoint_dir
     )
 
     # Save final model
-    final_model_path = os.path.join(output_dir, 'final_model.pt')
+    final_model_path = os.path.join(args.output_dir, 'final_model.pt')
     
     # Save the model state dict along with training metadata
     torch.save({
@@ -155,6 +165,7 @@ def main():
         'best_val_loss': training_metadata['best_val_loss'],
         'training_time_seconds': training_metadata['training_time']
     }, final_model_path)
+
 
     logger.info(f"Training complete. Final model saved to {final_model_path}")
     logger.info(f"Best model was from epoch {training_metadata['best_epoch']} with validation loss: {training_metadata['best_val_loss']:.4f}")

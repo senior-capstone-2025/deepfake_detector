@@ -123,26 +123,6 @@ class DeepfakeDetector(nn.Module):
         # For faster inference, set models to evaluation mode
         self.psp_encoder.eval()
         self.content_model.eval()
-
-
-    def preprocess_video(self, video_tensor):
-        """
-        Apply the necessary preprocessing for the PyTorchVideo model
-        """
-        # Expected input: video_tensor with shape [batch_size, C, T, H, W]
-        
-        # Normalize using the correct mean and std for Kinetics dataset
-        mean = torch.tensor([0.45, 0.45, 0.45]).view(1, 3, 1, 1, 1)
-        std = torch.tensor([0.225, 0.225, 0.225]).view(1, 3, 1, 1, 1)
-        
-        # Normalize to [0, 1] first if not already done
-        if video_tensor.max() > 1.0:
-            video_tensor = video_tensor / 255.0
-        
-        # Apply normalization
-        video_tensor = (video_tensor - mean) / std
-        
-        return video_tensor
     
     def compute_style_flow(self, face_frames):
         """
@@ -187,8 +167,6 @@ class DeepfakeDetector(nn.Module):
         """
         Extract content features using the 3D ResNet model from PyTorchVideo
         """
-        # Preprocess video frames
-        video_frames = self.preprocess_video(video_frames)
         
         with torch.no_grad():
             # Get features from the model
@@ -208,7 +186,7 @@ class DeepfakeDetector(nn.Module):
         
         return features
     
-    def forward(self, video_frames, face_frames):
+    def forward(self, video_frames, face_frames, style_codes=None):
         """
         Forward pass of the deepfake detection model
         
@@ -220,15 +198,31 @@ class DeepfakeDetector(nn.Module):
         # Check shapes
         logger.debug(f"Video frames shape: {video_frames.shape}")
         logger.debug(f"Face frames shape: {face_frames.shape}")
+        if style_codes is not None:
+            logger.debug(f"Style codes shape: {style_codes.shape}")
 
         try:
 
             # Extract content features
             content_features = self.extract_content_features(video_frames)
             logger.debug(f"Content features shape: {content_features.shape}")
-            
-            # Compute style flow
-            style_flow = self.compute_style_flow(face_frames)
+                
+                # Compute style flow
+            if style_codes is not None:
+                # We have pre-computed style codes
+                logger.debug(f"Using pre-computed style codes: {style_codes.shape}")
+                
+                # Compute style flow from pre-computed codes
+                batch_size, seq_len, dim = style_codes.shape
+                if seq_len > 1:
+                    style_flow = style_codes[:, 1:] - style_codes[:, :-1]
+                else:
+                    # Handle single frame case
+                    style_flow = torch.zeros((batch_size, 1, dim), device=video_frames.device)
+            else:
+                # Compute style flow on the fly
+                style_flow = self.compute_style_flow(face_frames)
+                
             logger.debug(f"Style flow shape: {style_flow.shape}")
             
             # Process style flow with StyleGRU
