@@ -6,6 +6,7 @@
 
 import os
 import torch
+import random
 import logging
 from tqdm import tqdm
 from preprocessor import DeepfakePreprocessor
@@ -18,7 +19,8 @@ def preprocess_video_directory(
     cache_dir, 
     label, 
     num_frames=32, 
-    force_reprocess=False
+    force_reprocess=False,
+    max_videos_per_dir=None
 ):
     """
     Preprocess all videos in a directory and save to cache
@@ -45,6 +47,11 @@ def preprocess_video_directory(
               if any(f.lower().endswith(ext) for ext in video_extensions)]
     
     logger.info(f"Found {len(videos)} videos in {dir_path}")
+
+    # If max_videos_per_dir is specified, randomly select that many videos
+    if max_videos_per_dir and len(videos) > max_videos_per_dir:
+        videos = random.sample(videos, max_videos_per_dir)
+        logger.info(f"Randomly selected {max_videos_per_dir} real videos for processing")
     
     # Process each video
     for filename in tqdm(videos, desc=f"Processing videos in {os.path.basename(dir_path)}"):
@@ -87,7 +94,7 @@ def preprocess_video_directory(
     return video_info
 
 
-def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frames=32, force_reprocess=False):
+def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frames=32, force_reprocess=False, max_videos_per_dir=None):
     """
     Preprocess all real and fake videos and return metadata for dataset creation
     
@@ -117,7 +124,8 @@ def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frame
         real_cache_dir, 
         label=0,  # 0 = real
         num_frames=num_frames,
-        force_reprocess=force_reprocess
+        force_reprocess=force_reprocess,
+        max_videos_per_dir=max_videos_per_dir
     )
     
     # Process fake videos
@@ -128,7 +136,8 @@ def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frame
         fake_cache_dir, 
         label=1,  # 1 = fake
         num_frames=num_frames,
-        force_reprocess=force_reprocess
+        force_reprocess=force_reprocess,
+        max_videos_per_dir=max_videos_per_dir
     )
     
     # Combine and return all video info

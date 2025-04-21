@@ -45,13 +45,20 @@ logger = logging.getLogger(__name__)
 
 def main():
 
+    import os
+    real_dir = '/mnt/d/deepfake_/original_sequences'
+    if os.path.exists(real_dir):
+        print(f"Directory exists! Contents: {os.listdir(real_dir)[:5]}")
+    else:
+        print(f"Directory {real_dir} does not exist or is not accessible")
+
     logger.info("Starting main training loop.")
 
     # Argument parser to handle device selection
     parser = argparse.ArgumentParser(description='Train deepfake detection model')
     # Paths to real and fake video directories: default for testing purposes
-    parser.add_argument('--real_dir', type=str, default='videos/original', help='Directory with real videos')
-    parser.add_argument('--fake_dir', type=str, default='videos/deepfake', help='Directory with fake videos')
+    parser.add_argument('--real_dir', type=str, default='/mnt/d/deepfake_/original_sequences', help='Directory with real videos')
+    parser.add_argument('--fake_dir', type=str, default='/mnt/d/deepfake_/manipulated_sequences', help='Directory with fake videos')
     # Device to use for training: default to cuda if available
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
                       help='Device to use (cuda/cpu)')
@@ -114,7 +121,8 @@ def main():
         preprocessor,
         args.cache_dir,
         num_frames=num_frames,
-        force_reprocess=args.force_reprocess
+        force_reprocess=args.force_reprocess,
+        max_videos_per_dir=20
     )
 
 
@@ -134,8 +142,6 @@ def main():
     logger.info("Creating DeepfakeDetector model.")
     detector = DeepfakeDetector(
         device=args.device,
-        psp_model=psp_model,
-        content_model=content_model,
         style_dim=512,          # W+ space dimension (only one layer of pSp style)
         content_dim=2048,       # ResNet feature dimension
         gru_hidden_size=1024,

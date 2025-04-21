@@ -95,10 +95,6 @@ class DeepfakeDetector(nn.Module):
         
         self.device = device
         
-        # Load pretrained models
-        self.psp_encoder = psp_model
-        self.content_model = content_model
-        
         # StyleGRU module
         self.style_gru = StyleGRU(
             input_size=style_dim,
@@ -123,67 +119,6 @@ class DeepfakeDetector(nn.Module):
             nn.Sigmoid()
         )
     
-    def compute_style_flow(self, face_frames):
-        """
-        Extract style latent vectors and compute style flow using only one latent level
-        """
-        batch_size, seq_len, c, h, w = face_frames.shape
-        
-        # Process each frame individually
-        latent_codes = []
-        
-        for i in range(seq_len):
-            # Extract a single frame from each batch
-            frame = face_frames[:, i, :, :, :]  # [batch_size, c, h, w]
-            
-            # Extract style latent vector using only the encoder
-            with torch.no_grad():
-                # This gives us shape [batch_size, 18, 512]
-                codes = self.psp_encoder.encoder(frame)
-                
-                # Use only one latent level (e.g., level 9 which is in the middle)
-                # This gives us a 512-dimensional vector per frame
-                level_idx = 9  # You can experiment with different levels
-                codes = codes[:, level_idx, :]  # Now shape is [batch_size, 512]
-                
-                latent_codes.append(codes)
-        
-        # Stack latent codes along sequence dimension
-        # Shape becomes [batch_size, seq_len, 512]
-        latent_codes = torch.stack(latent_codes, dim=1)
-        logger.debug(f"Latent codes shape: {latent_codes.shape}")
-        
-        # Compute style flow (differences between consecutive frames)
-        if seq_len > 1:
-            style_flow = latent_codes[:, 1:] - latent_codes[:, :-1]
-        else:
-            # Handle single frame case
-            style_flow = torch.zeros((batch_size, 1, latent_codes.size(-1)), device=latent_codes.device)
-        
-        return style_flow
-    
-    def extract_content_features(self, video_frames):
-        """
-        Extract content features using the 3D ResNet model from PyTorchVideo
-        """
-        
-        with torch.no_grad():
-            # Get features from the model
-            features = self.content_model(video_frames)
-            
-            # Print the feature shape
-            logger.debug(f"Raw features shape: {features.shape}")
-            
-            # Apply global average pooling if needed
-            if len(features.shape) > 2:
-                # If we have spatial dimensions remaining, apply pooling
-                # For SlowFast models, this might be [batch, channels, time, h, w]
-                dims_to_pool = list(range(2, len(features.shape)))
-                features = torch.mean(features, dim=dims_to_pool)
-            
-            logger.debug(f"Content features shape: {features.shape}")
-        
-        return features
     
     def forward(self, content_features, style_codes):
         """

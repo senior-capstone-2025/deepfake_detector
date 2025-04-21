@@ -29,8 +29,8 @@ class DeepfakePreprocessor:
         self.face_size = face_size
         self.video_size = video_size
         self.device = device
-        self.content_model = content_model
-        self.psp_model = psp_model
+        self.content_model = content_model.to(device)
+        self.psp_model = psp_model.to(device)
         
 
         # Load content model if provided

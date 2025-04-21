@@ -9,3 +9,5 @@ __pycache__/
 *.pyc
 videos/
 preprocessed_cache/
+venv/
+deep_env/
