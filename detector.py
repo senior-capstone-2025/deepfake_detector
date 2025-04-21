@@ -84,9 +84,7 @@ class DeepfakeDetector(nn.Module):
     Simplified Deepfake Detection model based on style latent flows
     """
     def __init__(self, 
-                device,
-                psp_model,                # Pretrained pSp encoder
-                content_model,            # 3D ResNet for content features
+                device,          # 3D ResNet for content features
                 style_dim=512,            # StyleGAN latent dimension
                 content_dim=2048,         # Content feature dimension from ResNet
                 gru_hidden_size=1024,     # GRU hidden dimension

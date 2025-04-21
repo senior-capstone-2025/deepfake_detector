@@ -44,14 +44,7 @@ from train import train_model
 logger = logging.getLogger(__name__)
 
 def main():
-
-    import os
-    real_dir = '/mnt/d/deepfake_/original_sequences'
-    if os.path.exists(real_dir):
-        print(f"Directory exists! Contents: {os.listdir(real_dir)[:5]}")
-    else:
-        print(f"Directory {real_dir} does not exist or is not accessible")
-
+    
     logger.info("Starting main training loop.")
 
     # Argument parser to handle device selection
