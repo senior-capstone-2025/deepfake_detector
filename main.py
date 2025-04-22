@@ -26,7 +26,7 @@ import warnings
 warnings.filterwarnings("ignore", message="You are using `torch.load` with `weights_only=False`")
 
 # Import necessary utility functions
-from preprocess import preprocess_all_videos
+from preprocess_all_videos import preprocess_all_videos
 # Import custom modules
 from preprocessor import DeepfakePreprocessor
 from detector import DeepfakeDetector
@@ -108,7 +108,7 @@ def main():
         args.cache_dir,
         num_frames=num_frames,
         force_reprocess=args.force_reprocess,
-        max_videos_per_dir=250
+        max_videos_per_dir=252
     )
 
 

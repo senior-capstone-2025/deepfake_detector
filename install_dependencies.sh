@@ -13,6 +13,10 @@ pip install -r requirements.txt
 # Clone the pSp respository
 git clone https://github.com/eladrich/pixel2style2pixel.git
 
+wget https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip
+sudo unzip ninja-linux.zip -d /usr/local/bin/
+sudo update-alternatives --install /usr/bin/ninja ninja /usr/local/bin/ninja 1 --force 
+
 # Get the pretrained pSp encoder weights
 cd pixel2style2pixel
 mkdir pretrained_models

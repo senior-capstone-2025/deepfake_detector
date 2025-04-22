@@ -281,3 +281,51 @@ weighted avg       0.62      0.61      0.61       200
 2025-04-22 14:16:50,377 - __main__ - INFO - Detailed results saved to /mnt/d/deepfake_detector/trained_models/0422_14h00m52s_model/evaluation/0422_14h16m49s_results.pt
 2025-04-22 14:16:50,380 - __main__ - INFO - Evaluation summary saved to /mnt/d/deepfake_detector/trained_models/0422_14h00m52s_model/evaluation/0422_14h16m49s_summary.txt
 2025-04-22 14:16:50,380 - __main__ - INFO - Evaluation complete
+2025-04-22 16:09:14,366 - __main__ - INFO - Loading model from /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model
+2025-04-22 16:09:15,184 - __main__ - INFO - Model loaded. Training metadata:
+2025-04-22 16:09:15,184 - __main__ - INFO -   training_complete: True
+2025-04-22 16:09:15,184 - __main__ - INFO -   training_date: 2025-04-22 16:08:17
+2025-04-22 16:09:15,184 - __main__ - INFO -   epochs_trained: 5
+2025-04-22 16:09:15,184 - __main__ - INFO -   best_epoch: 5
+2025-04-22 16:09:15,184 - __main__ - INFO -   best_val_loss: 0.5138163495771956
+2025-04-22 16:09:15,184 - __main__ - INFO - Setting up preprocessor
+2025-04-22 16:09:22,157 - utils.load_models - INFO - Pretrained pSp model loaded successfully.
+2025-04-22 16:09:22,776 - preprocessor - INFO - Loading 3D ResNet model.
+2025-04-22 16:09:24,500 - utils.load_models - INFO - Pretrained 3D ResNet model loaded successfully.
+2025-04-22 16:09:24,707 - __main__ - INFO - Preprocessing videos (or loading from cache)
+2025-04-22 16:09:24,717 - preprocess_all_videos - INFO - Processing real videos...
+2025-04-22 16:09:24,725 - preprocess_all_videos - INFO - Found 363 videos in /mnt/d/deepfake_detector/deepfake_dataset/original_sequences
+2025-04-22 16:09:24,725 - preprocess_all_videos - INFO - Selected first 100 videos for processing
+2025-04-22 16:09:25,581 - preprocess_all_videos - INFO - Processing fake videos...
+2025-04-22 16:09:25,602 - preprocess_all_videos - INFO - Found 3068 videos in /mnt/d/deepfake_detector/deepfake_dataset/manipulated_sequences
+2025-04-22 16:09:25,603 - preprocess_all_videos - INFO - Selected first 100 videos for processing
+2025-04-22 16:09:26,928 - preprocess_all_videos - INFO - Total processed videos: 200
+2025-04-22 16:09:26,928 - preprocess_all_videos - INFO - Valid videos: 200, Invalid: 0
+2025-04-22 16:09:26,928 - preprocess_all_videos - INFO - Total processing time: 2.22 seconds (0.04 minutes)
+2025-04-22 16:09:26,929 - preprocess_all_videos - INFO - Time per video: 0.01 seconds
+2025-04-22 16:09:26,934 - dataset - INFO - Train dataset size: 0
+2025-04-22 16:09:26,934 - dataset - INFO - Validation dataset size: 200
+2025-04-22 16:09:26,936 - __main__ - INFO - Evaluation results will be saved to 0422_16h09m26s_results.pt and 0422_16h09m26s_summary.txt
+2025-04-22 16:09:26,936 - __main__ - INFO - Evaluating model
+2025-04-22 16:09:28,320 - __main__ - INFO - Evaluation Results:
+2025-04-22 16:09:28,321 - __main__ - INFO -   Accuracy:  0.6650
+2025-04-22 16:09:28,321 - __main__ - INFO -   Precision: 0.6241
+2025-04-22 16:09:28,321 - __main__ - INFO -   Recall:    0.8300
+2025-04-22 16:09:28,321 - __main__ - INFO -   F1 Score:  0.7124
+2025-04-22 16:09:28,332 - __main__ - INFO -   Confusion Matrix:
+[[50 50]
+ [17 83]]
+2025-04-22 16:09:28,332 - __main__ - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+        Real       0.75      0.50      0.60       100
+        Fake       0.62      0.83      0.71       100
+
+    accuracy                           0.67       200
+   macro avg       0.69      0.67      0.66       200
+weighted avg       0.69      0.67      0.66       200
+
+2025-04-22 16:09:28,799 - __main__ - INFO - Confusion matrix saved to /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/evaluation/confusion_matrix.png
+2025-04-22 16:09:28,839 - __main__ - INFO - Detailed results saved to /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/evaluation/0422_16h09m26s_results.pt
+2025-04-22 16:09:28,861 - __main__ - INFO - Evaluation summary saved to /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/evaluation/0422_16h09m26s_summary.txt
+2025-04-22 16:09:28,861 - __main__ - INFO - Evaluation complete

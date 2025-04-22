@@ -618,3 +618,201 @@
 2025-04-22 14:18:29,426 - __main__ - INFO - Training complete. Final model saved to /mnt/d/deepfake_detector/trained_models/0422_14h18m03s_model/final_model.pt
 2025-04-22 14:18:29,426 - __main__ - INFO - Best model was from epoch 4 with validation loss: 0.4565
 2025-04-22 14:18:29,426 - __main__ - INFO - Total training time: 0.25 minutes
+2025-04-22 16:00:00,247 - __main__ - INFO - Starting main training loop.
+2025-04-22 16:00:00,251 - __main__ - INFO - Arguments parsed: Namespace(real_dir='/mnt/d/deepfake_detector/deepfake_dataset/original_sequences', fake_dir='/mnt/d/deepfake_detector/deepfake_dataset/manipulated_sequences', device='cuda', output_dir='/mnt/d/deepfake_detector/trained_models', cache_dir='/mnt/d/deepfake_detector/preprocessed_cache', force_reprocess=False)
+2025-04-22 16:00:00,252 - __main__ - INFO - Using device: cuda
+2025-04-22 16:00:00,252 - __main__ - INFO - Hyperparameters: batch_size=64, num_frames=32, epochs=5, lr=0.0010
+2025-04-22 16:00:00,334 - __main__ - INFO - Final model directory: /mnt/d/deepfake_detector/trained_models/0422_16h00m00s_model
+2025-04-22 16:00:00,347 - __main__ - INFO - Checkpoint directory: /mnt/d/deepfake_detector/trained_models/0422_16h00m00s_model/checkpoints
+2025-04-22 16:00:00,347 - __main__ - INFO - Creating preprocessor.
+2025-04-22 16:00:09,408 - utils.load_models - INFO - Pretrained pSp model loaded successfully.
+2025-04-22 16:00:09,914 - preprocessor - INFO - Loading 3D ResNet model.
+2025-04-22 16:00:11,536 - utils.load_models - INFO - Pretrained 3D ResNet model loaded successfully.
+2025-04-22 16:00:11,671 - __main__ - INFO - Starting video preprocessing...
+2025-04-22 16:00:51,207 - __main__ - INFO - Starting main training loop.
+2025-04-22 16:00:51,211 - __main__ - INFO - Arguments parsed: Namespace(real_dir='/mnt/d/deepfake_detector/deepfake_dataset/original_sequences', fake_dir='/mnt/d/deepfake_detector/deepfake_dataset/manipulated_sequences', device='cuda', output_dir='/mnt/d/deepfake_detector/trained_models', cache_dir='/mnt/d/deepfake_detector/preprocessed_cache', force_reprocess=False)
+2025-04-22 16:00:51,212 - __main__ - INFO - Using device: cuda
+2025-04-22 16:00:51,212 - __main__ - INFO - Hyperparameters: batch_size=64, num_frames=32, epochs=5, lr=0.0010
+2025-04-22 16:00:51,296 - __main__ - INFO - Final model directory: /mnt/d/deepfake_detector/trained_models/0422_16h00m51s_model
+2025-04-22 16:00:51,307 - __main__ - INFO - Checkpoint directory: /mnt/d/deepfake_detector/trained_models/0422_16h00m51s_model/checkpoints
+2025-04-22 16:00:51,307 - __main__ - INFO - Creating preprocessor.
+2025-04-22 16:00:59,539 - utils.load_models - INFO - Pretrained pSp model loaded successfully.
+2025-04-22 16:01:00,081 - preprocessor - INFO - Loading 3D ResNet model.
+2025-04-22 16:01:01,709 - utils.load_models - INFO - Pretrained 3D ResNet model loaded successfully.
+2025-04-22 16:01:01,831 - __main__ - INFO - Starting video preprocessing...
+2025-04-22 16:01:01,843 - preprocess_all_videos - INFO - Processing real videos...
+2025-04-22 16:01:01,852 - preprocess_all_videos - INFO - Found 363 videos in /mnt/d/deepfake_detector/deepfake_dataset/original_sequences
+2025-04-22 16:01:01,853 - preprocess_all_videos - INFO - Selected first 250 videos for processing
+2025-04-22 16:01:04,393 - preprocess_all_videos - INFO - Processing fake videos...
+2025-04-22 16:01:04,416 - preprocess_all_videos - INFO - Found 3068 videos in /mnt/d/deepfake_detector/deepfake_dataset/manipulated_sequences
+2025-04-22 16:01:04,417 - preprocess_all_videos - INFO - Selected first 250 videos for processing
+2025-04-22 16:01:09,501 - preprocess_all_videos - INFO - Total processed videos: 500
+2025-04-22 16:01:09,501 - preprocess_all_videos - INFO - Valid videos: 500, Invalid: 0
+2025-04-22 16:01:09,501 - __main__ - INFO - Creating traing/validation dataloaders.
+2025-04-22 16:01:09,502 - dataset - INFO - Train dataset size: 400
+2025-04-22 16:01:09,502 - dataset - INFO - Validation dataset size: 100
+2025-04-22 16:01:09,503 - __main__ - INFO - Creating DeepfakeDetector model.
+2025-04-22 16:01:09,613 - __main__ - INFO - Begin training.
+2025-04-22 16:01:09,614 - train - INFO - Begin training model on device: cuda
+2025-04-22 16:01:09,614 - train - INFO - Number of epochs: 5, Learning rate: 0.001
+2025-04-22 16:01:09,614 - train - INFO - Training data: 7 batches
+2025-04-22 16:01:09,614 - train - INFO - Validation data: 2 batches
+2025-04-22 16:01:09,800 - train - INFO - Starting training loop
+2025-04-22 16:01:09,800 - train - INFO - Epoch 1/5 - Training phase started
+2025-04-22 16:01:11,913 - train - INFO - Batch 0 - Loss: 0.6937
+2025-04-22 16:01:12,493 - train - INFO - Epoch 1/5 - Training completed: Loss=0.6786, Accuracy=0.5175
+2025-04-22 16:01:12,493 - train - INFO - Epoch 1/5 - Validation phase started
+2025-04-22 16:01:13,189 - train - INFO - Epoch 1/5 - Validation completed: Loss=0.6234, Accuracy=0.6300
+2025-04-22 16:01:14,958 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h00m51s_model/checkpoints/model_epoch_1.pt
+2025-04-22 16:01:16,314 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h00m51s_model/checkpoints/best_model.pt with validation loss: 0.6234
+2025-04-22 16:01:16,314 - train - INFO - Epoch 2/5 - Training phase started
+2025-04-22 16:01:17,285 - train - INFO - Batch 0 - Loss: 0.6125
+2025-04-22 16:01:17,819 - train - INFO - Epoch 2/5 - Training completed: Loss=0.6059, Accuracy=0.6525
+2025-04-22 16:01:17,820 - train - INFO - Epoch 2/5 - Validation phase started
+2025-04-22 16:01:18,455 - train - INFO - Epoch 2/5 - Validation completed: Loss=0.5595, Accuracy=0.7000
+2025-04-22 16:01:19,656 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h00m51s_model/checkpoints/model_epoch_2.pt
+2025-04-22 16:01:20,770 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h00m51s_model/checkpoints/best_model.pt with validation loss: 0.5595
+2025-04-22 16:01:20,770 - train - INFO - Epoch 3/5 - Training phase started
+2025-04-22 16:01:21,428 - train - INFO - Batch 0 - Loss: 0.5600
+2025-04-22 16:01:22,058 - train - INFO - Epoch 3/5 - Training completed: Loss=0.5599, Accuracy=0.6625
+2025-04-22 16:01:22,058 - train - INFO - Epoch 3/5 - Validation phase started
+2025-04-22 16:01:22,991 - train - INFO - Epoch 3/5 - Validation completed: Loss=0.5568, Accuracy=0.6400
+2025-04-22 16:01:32,195 - __main__ - INFO - Starting main training loop.
+2025-04-22 16:01:32,197 - __main__ - INFO - Arguments parsed: Namespace(real_dir='/mnt/d/deepfake_detector/deepfake_dataset/original_sequences', fake_dir='/mnt/d/deepfake_detector/deepfake_dataset/manipulated_sequences', device='cuda', output_dir='/mnt/d/deepfake_detector/trained_models', cache_dir='/mnt/d/deepfake_detector/preprocessed_cache', force_reprocess=False)
+2025-04-22 16:01:32,197 - __main__ - INFO - Using device: cuda
+2025-04-22 16:01:32,197 - __main__ - INFO - Hyperparameters: batch_size=64, num_frames=32, epochs=5, lr=0.0010
+2025-04-22 16:01:32,209 - __main__ - INFO - Final model directory: /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model
+2025-04-22 16:01:32,217 - __main__ - INFO - Checkpoint directory: /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints
+2025-04-22 16:01:32,217 - __main__ - INFO - Creating preprocessor.
+2025-04-22 16:01:41,655 - utils.load_models - INFO - Pretrained pSp model loaded successfully.
+2025-04-22 16:01:42,267 - preprocessor - INFO - Loading 3D ResNet model.
+2025-04-22 16:01:44,230 - utils.load_models - INFO - Pretrained 3D ResNet model loaded successfully.
+2025-04-22 16:01:44,399 - __main__ - INFO - Starting video preprocessing...
+2025-04-22 16:01:44,416 - preprocess_all_videos - INFO - Processing real videos...
+2025-04-22 16:01:44,427 - preprocess_all_videos - INFO - Found 363 videos in /mnt/d/deepfake_detector/deepfake_dataset/original_sequences
+2025-04-22 16:01:44,428 - preprocess_all_videos - INFO - Selected first 251 videos for processing
+2025-04-22 16:02:05,070 - preprocess_all_videos - INFO - Processing fake videos...
+2025-04-22 16:02:05,107 - preprocess_all_videos - INFO - Found 3068 videos in /mnt/d/deepfake_detector/deepfake_dataset/manipulated_sequences
+2025-04-22 16:02:05,107 - preprocess_all_videos - INFO - Selected first 251 videos for processing
+2025-04-22 16:02:24,993 - preprocess_all_videos - INFO - Total processed videos: 502
+2025-04-22 16:02:24,993 - preprocess_all_videos - INFO - Valid videos: 502, Invalid: 0
+2025-04-22 16:02:24,993 - __main__ - INFO - Creating traing/validation dataloaders.
+2025-04-22 16:02:24,993 - dataset - INFO - Train dataset size: 401
+2025-04-22 16:02:24,993 - dataset - INFO - Validation dataset size: 101
+2025-04-22 16:02:24,994 - __main__ - INFO - Creating DeepfakeDetector model.
+2025-04-22 16:02:25,074 - __main__ - INFO - Begin training.
+2025-04-22 16:02:25,074 - train - INFO - Begin training model on device: cuda
+2025-04-22 16:02:25,074 - train - INFO - Number of epochs: 5, Learning rate: 0.001
+2025-04-22 16:02:25,074 - train - INFO - Training data: 7 batches
+2025-04-22 16:02:25,074 - train - INFO - Validation data: 2 batches
+2025-04-22 16:02:25,109 - train - INFO - Starting training loop
+2025-04-22 16:02:25,110 - train - INFO - Epoch 1/5 - Training phase started
+2025-04-22 16:02:25,999 - train - INFO - Batch 0 - Loss: 0.6924
+2025-04-22 16:02:26,569 - train - INFO - Epoch 1/5 - Training completed: Loss=0.7099, Accuracy=0.5611
+2025-04-22 16:02:26,569 - train - INFO - Epoch 1/5 - Validation phase started
+2025-04-22 16:02:27,039 - train - INFO - Epoch 1/5 - Validation completed: Loss=0.6356, Accuracy=0.5743
+2025-04-22 16:02:28,100 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints/model_epoch_1.pt
+2025-04-22 16:02:29,141 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints/best_model.pt with validation loss: 0.6356
+2025-04-22 16:02:29,141 - train - INFO - Epoch 2/5 - Training phase started
+2025-04-22 16:02:30,016 - train - INFO - Batch 0 - Loss: 0.6506
+2025-04-22 16:02:30,607 - train - INFO - Epoch 2/5 - Training completed: Loss=0.6110, Accuracy=0.6858
+2025-04-22 16:02:30,608 - train - INFO - Epoch 2/5 - Validation phase started
+2025-04-22 16:02:31,232 - train - INFO - Epoch 2/5 - Validation completed: Loss=0.5779, Accuracy=0.6931
+2025-04-22 16:02:32,352 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints/model_epoch_2.pt
+2025-04-22 16:02:33,445 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints/best_model.pt with validation loss: 0.5779
+2025-04-22 16:02:33,445 - train - INFO - Epoch 3/5 - Training phase started
+2025-04-22 16:02:34,182 - train - INFO - Batch 0 - Loss: 0.5911
+2025-04-22 16:02:34,773 - train - INFO - Epoch 3/5 - Training completed: Loss=0.5588, Accuracy=0.7207
+2025-04-22 16:02:34,773 - train - INFO - Epoch 3/5 - Validation phase started
+2025-04-22 16:02:35,369 - train - INFO - Epoch 3/5 - Validation completed: Loss=0.5525, Accuracy=0.6832
+2025-04-22 16:02:36,439 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints/model_epoch_3.pt
+2025-04-22 16:02:37,468 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints/best_model.pt with validation loss: 0.5525
+2025-04-22 16:02:37,468 - train - INFO - Epoch 4/5 - Training phase started
+2025-04-22 16:02:38,174 - train - INFO - Batch 0 - Loss: 0.5813
+2025-04-22 16:02:38,785 - train - INFO - Epoch 4/5 - Training completed: Loss=0.5001, Accuracy=0.7531
+2025-04-22 16:02:38,786 - train - INFO - Epoch 4/5 - Validation phase started
+2025-04-22 16:02:39,370 - train - INFO - Epoch 4/5 - Validation completed: Loss=0.5145, Accuracy=0.7624
+2025-04-22 16:02:40,502 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints/model_epoch_4.pt
+2025-04-22 16:02:41,531 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints/best_model.pt with validation loss: 0.5145
+2025-04-22 16:02:41,531 - train - INFO - Epoch 5/5 - Training phase started
+2025-04-22 16:02:42,272 - train - INFO - Batch 0 - Loss: 0.7360
+2025-04-22 16:02:42,844 - train - INFO - Epoch 5/5 - Training completed: Loss=0.5472, Accuracy=0.6808
+2025-04-22 16:02:42,844 - train - INFO - Epoch 5/5 - Validation phase started
+2025-04-22 16:02:43,429 - train - INFO - Epoch 5/5 - Validation completed: Loss=0.5400, Accuracy=0.7228
+2025-04-22 16:02:44,666 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/checkpoints/model_epoch_5.pt
+2025-04-22 16:02:45,561 - train - INFO - Loaded best model from epoch 4 with validation loss: 0.5145
+2025-04-22 16:02:45,561 - train - INFO - Training completed in 20.48 seconds (0.34 minutes)
+2025-04-22 16:02:45,980 - __main__ - INFO - Training complete. Final model saved to /mnt/d/deepfake_detector/trained_models/0422_16h01m32s_model/final_model.pt
+2025-04-22 16:02:45,981 - __main__ - INFO - Best model was from epoch 4 with validation loss: 0.5145
+2025-04-22 16:02:45,981 - __main__ - INFO - Total training time: 0.34 minutes
+2025-04-22 16:07:08,418 - __main__ - INFO - Starting main training loop.
+2025-04-22 16:07:08,421 - __main__ - INFO - Arguments parsed: Namespace(real_dir='/mnt/d/deepfake_detector/deepfake_dataset/original_sequences', fake_dir='/mnt/d/deepfake_detector/deepfake_dataset/manipulated_sequences', device='cuda', output_dir='/mnt/d/deepfake_detector/trained_models', cache_dir='/mnt/d/deepfake_detector/preprocessed_cache', force_reprocess=False)
+2025-04-22 16:07:08,421 - __main__ - INFO - Using device: cuda
+2025-04-22 16:07:08,421 - __main__ - INFO - Hyperparameters: batch_size=64, num_frames=32, epochs=5, lr=0.0010
+2025-04-22 16:07:08,431 - __main__ - INFO - Final model directory: /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model
+2025-04-22 16:07:08,499 - __main__ - INFO - Checkpoint directory: /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints
+2025-04-22 16:07:08,499 - __main__ - INFO - Creating preprocessor.
+2025-04-22 16:07:16,191 - utils.load_models - INFO - Pretrained pSp model loaded successfully.
+2025-04-22 16:07:16,692 - preprocessor - INFO - Loading 3D ResNet model.
+2025-04-22 16:07:18,323 - utils.load_models - INFO - Pretrained 3D ResNet model loaded successfully.
+2025-04-22 16:07:18,459 - __main__ - INFO - Starting video preprocessing...
+2025-04-22 16:07:18,473 - preprocess_all_videos - INFO - Processing real videos...
+2025-04-22 16:07:18,484 - preprocess_all_videos - INFO - Found 363 videos in /mnt/d/deepfake_detector/deepfake_dataset/original_sequences
+2025-04-22 16:07:18,484 - preprocess_all_videos - INFO - Selected first 252 videos for processing
+2025-04-22 16:07:38,842 - preprocess_all_videos - INFO - Processing fake videos...
+2025-04-22 16:07:38,870 - preprocess_all_videos - INFO - Found 3068 videos in /mnt/d/deepfake_detector/deepfake_dataset/manipulated_sequences
+2025-04-22 16:07:38,870 - preprocess_all_videos - INFO - Selected first 252 videos for processing
+2025-04-22 16:07:54,409 - preprocess_all_videos - INFO - Total processed videos: 504
+2025-04-22 16:07:54,410 - preprocess_all_videos - INFO - Valid videos: 504, Invalid: 0
+2025-04-22 16:07:54,410 - preprocess_all_videos - INFO - Total processing time: 35.95 seconds (0.60 minutes)
+2025-04-22 16:07:54,420 - preprocess_all_videos - INFO - Time per video: 0.07 seconds
+2025-04-22 16:07:54,420 - __main__ - INFO - Creating traing/validation dataloaders.
+2025-04-22 16:07:54,424 - dataset - INFO - Train dataset size: 403
+2025-04-22 16:07:54,424 - dataset - INFO - Validation dataset size: 101
+2025-04-22 16:07:54,426 - __main__ - INFO - Creating DeepfakeDetector model.
+2025-04-22 16:07:54,573 - __main__ - INFO - Begin training.
+2025-04-22 16:07:54,573 - train - INFO - Begin training model on device: cuda
+2025-04-22 16:07:54,573 - train - INFO - Number of epochs: 5, Learning rate: 0.001
+2025-04-22 16:07:54,573 - train - INFO - Training data: 7 batches
+2025-04-22 16:07:54,573 - train - INFO - Validation data: 2 batches
+2025-04-22 16:07:54,628 - train - INFO - Starting training loop
+2025-04-22 16:07:54,628 - train - INFO - Epoch 1/5 - Training phase started
+2025-04-22 16:07:55,434 - train - INFO - Batch 0 - Loss: 0.7053
+2025-04-22 16:07:56,016 - train - INFO - Epoch 1/5 - Training completed: Loss=0.6785, Accuracy=0.5484
+2025-04-22 16:07:56,017 - train - INFO - Epoch 1/5 - Validation phase started
+2025-04-22 16:07:56,550 - train - INFO - Epoch 1/5 - Validation completed: Loss=1.1362, Accuracy=0.4752
+2025-04-22 16:07:57,564 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/model_epoch_1.pt
+2025-04-22 16:08:00,776 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/best_model.pt with validation loss: 1.1362
+2025-04-22 16:08:00,776 - train - INFO - Epoch 2/5 - Training phase started
+2025-04-22 16:08:01,540 - train - INFO - Batch 0 - Loss: 1.1601
+2025-04-22 16:08:02,155 - train - INFO - Epoch 2/5 - Training completed: Loss=0.6892, Accuracy=0.7146
+2025-04-22 16:08:02,155 - train - INFO - Epoch 2/5 - Validation phase started
+2025-04-22 16:08:02,744 - train - INFO - Epoch 2/5 - Validation completed: Loss=0.6066, Accuracy=0.6733
+2025-04-22 16:08:03,848 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/model_epoch_2.pt
+2025-04-22 16:08:04,900 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/best_model.pt with validation loss: 0.6066
+2025-04-22 16:08:04,900 - train - INFO - Epoch 3/5 - Training phase started
+2025-04-22 16:08:05,600 - train - INFO - Batch 0 - Loss: 0.5916
+2025-04-22 16:08:06,191 - train - INFO - Epoch 3/5 - Training completed: Loss=0.5606, Accuracy=0.7221
+2025-04-22 16:08:06,192 - train - INFO - Epoch 3/5 - Validation phase started
+2025-04-22 16:08:06,817 - train - INFO - Epoch 3/5 - Validation completed: Loss=0.5807, Accuracy=0.6733
+2025-04-22 16:08:07,763 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/model_epoch_3.pt
+2025-04-22 16:08:08,748 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/best_model.pt with validation loss: 0.5807
+2025-04-22 16:08:08,749 - train - INFO - Epoch 4/5 - Training phase started
+2025-04-22 16:08:09,407 - train - INFO - Batch 0 - Loss: 0.4963
+2025-04-22 16:08:09,953 - train - INFO - Epoch 4/5 - Training completed: Loss=0.5280, Accuracy=0.7320
+2025-04-22 16:08:09,954 - train - INFO - Epoch 4/5 - Validation phase started
+2025-04-22 16:08:10,473 - train - INFO - Epoch 4/5 - Validation completed: Loss=0.5521, Accuracy=0.6733
+2025-04-22 16:08:11,342 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/model_epoch_4.pt
+2025-04-22 16:08:12,222 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/best_model.pt with validation loss: 0.5521
+2025-04-22 16:08:12,222 - train - INFO - Epoch 5/5 - Training phase started
+2025-04-22 16:08:12,868 - train - INFO - Batch 0 - Loss: 0.4891
+2025-04-22 16:08:13,447 - train - INFO - Epoch 5/5 - Training completed: Loss=0.5408, Accuracy=0.7543
+2025-04-22 16:08:13,447 - train - INFO - Epoch 5/5 - Validation phase started
+2025-04-22 16:08:14,002 - train - INFO - Epoch 5/5 - Validation completed: Loss=0.5138, Accuracy=0.7822
+2025-04-22 16:08:15,220 - train - INFO - Checkpoint saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/model_epoch_5.pt
+2025-04-22 16:08:16,179 - train - INFO - New best model saved at /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/checkpoints/best_model.pt with validation loss: 0.5138
+2025-04-22 16:08:17,072 - train - INFO - Loaded best model from epoch 5 with validation loss: 0.5138
+2025-04-22 16:08:17,072 - train - INFO - Training completed in 22.49 seconds (0.37 minutes)
+2025-04-22 16:08:17,406 - __main__ - INFO - Training complete. Final model saved to /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model/final_model.pt
+2025-04-22 16:08:17,406 - __main__ - INFO - Best model was from epoch 5 with validation loss: 0.5138
+2025-04-22 16:08:17,407 - __main__ - INFO - Total training time: 0.37 minutes

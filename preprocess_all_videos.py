@@ -6,8 +6,8 @@
 
 import os
 import torch
-import random
 import logging
+import time
 from tqdm import tqdm
 from preprocessor import DeepfakePreprocessor
 
@@ -109,6 +109,8 @@ def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frame
     Returns:
         List of tuples (cache_path, label, is_valid)
     """
+
+    start_time = time.time()
     
     # Create cache directories
     real_cache_dir = os.path.join(cache_dir, 'real')
@@ -148,4 +150,8 @@ def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frame
     valid_count = sum(1 for _, _, is_valid in all_videos if is_valid)
     logger.info(f"Valid videos: {valid_count}, Invalid: {len(all_videos) - valid_count}")
     
+    total_time = time.time() - start_time
+    logger.info(f"Total processing time: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
+    logger.info("Time per video: {:.2f} seconds".format(total_time / len(all_videos) if all_videos else 0))
+
     return all_videos
