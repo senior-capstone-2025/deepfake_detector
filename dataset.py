@@ -90,14 +90,17 @@ def create_dataloaders(video_info, batch_size=8, train_split=0.8):
     logger.info(f"Train dataset size: {len(train_dataset)}")
     logger.info(f"Validation dataset size: {len(val_dataset)}")
     
-    # Create dataloaders
-    train_loader = DataLoader(
-        train_dataset, 
-        batch_size=batch_size, 
-        shuffle=True,
-        num_workers=4,
-        collate_fn=collate_with_filter
-    )
+    if train_split != 0:
+        # Create dataloaders
+        train_loader = DataLoader(
+            train_dataset, 
+            batch_size=batch_size, 
+            shuffle=True,
+            num_workers=4,
+            collate_fn=collate_with_filter
+        )
+    else:
+        train_loader = None
     
     val_loader = DataLoader(
         val_dataset, 

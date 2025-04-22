@@ -5,35 +5,28 @@
 ##
 
 import time
+import datetime
+import argparse
+import os
+import numpy as np
+import torch
 import logging
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("model.log"),
+        logging.FileHandler("preprocess_train.log"),
         logging.StreamHandler()
     ]
 )
-
-import numpy as np
-import torch
 
 # Suppress PyTorch future version warnings
 import warnings
 warnings.filterwarnings("ignore", message="You are using `torch.load` with `weights_only=False`")
 
-import argparse
-import os
-import sys
-# Add the pixel2style2pixel directory to the Python path
-pixel2style2pixel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pixel2style2pixel')
-sys.path.append(pixel2style2pixel_path)
-
 # Import necessary utility functions
 from preprocess import preprocess_all_videos
-from utils.load_models import load_psp_encoder, load_resnet_module
-
 # Import custom modules
 from preprocessor import DeepfakePreprocessor
 from detector import DeepfakeDetector
@@ -43,29 +36,40 @@ from train import train_model
 # Create logger
 logger = logging.getLogger(__name__)
 
+def create_directories(output_dir):
+    # Create a unique directory for the final model
+    train_date = datetime.datetime.now().strftime("%m%d_%Hh%Mm%Ss")
+    model_dir = os.path.join(output_dir, f"{train_date}_model")
+    os.makedirs(model_dir, exist_ok=True)
+    logger.info("Final model directory: %s", model_dir)
+
+    # Create checkpoint directory
+    checkpoint_dir = os.path.join(model_dir, "checkpoints")
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    logger.info(f"Checkpoint directory: {checkpoint_dir}")
+
+    return model_dir, checkpoint_dir
+
 def main():
-    
+
     logger.info("Starting main training loop.")
 
     # Argument parser to handle device selection
     parser = argparse.ArgumentParser(description='Train deepfake detection model')
     # Paths to real and fake video directories: default for testing purposes
-    parser.add_argument('--real_dir', type=str, default='/mnt/d/deepfake_/original_sequences', help='Directory with real videos')
-    parser.add_argument('--fake_dir', type=str, default='/mnt/d/deepfake_/manipulated_sequences', help='Directory with fake videos')
+    parser.add_argument('--real_dir', type=str, default='./videos/real', help='Directory with real videos')
+    parser.add_argument('--fake_dir', type=str, default='./videos/fake', help='Directory with fake videos')
     # Device to use for training: default to cuda if available
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
                       help='Device to use (cuda/cpu)')
     # Add output directory argument
-    parser.add_argument('--output_dir', type=str, default='results', help='Directory to save results')
-    # Add checkpoint directory argument
-    parser.add_argument('--checkpoint_dir', type=str, default='checkpoints', help='Directory to save checkpoints')
+    parser.add_argument('--output_dir', type=str, default='trained_models', help='Directory to save results')
     # Cache directory
     parser.add_argument('--cache_dir', type=str, default='preprocessed_cache', help='Directory for preprocessed data')
     # Force reprocessing
-    parser.add_argument('--force_reprocess', action='store_true', help='Force reprocessing of all videos')
+    parser.add_argument('--force_reprocess', action='store_true', help='Force reprocessing of all videos (use when making changes to preprocessor)')
    
     args = parser.parse_args()
-
     logger.info("Arguments parsed: %s", args)
 
     # Video sizes
@@ -75,34 +79,23 @@ def main():
     # Hyperparameters
     batch_size = 64
     num_frames = 32
-    epochs = 2
+    epochs = 5
     learning_rate = 0.001
 
-    # Create output directories if they don't exist
-    os.makedirs(args.output_dir, exist_ok=True)
-    os.makedirs(args.checkpoint_dir, exist_ok=True)
-    os.makedirs(args.cache_dir, exist_ok=True)
-
+    # Log hyperparameters
     logger.info("Using device: %s", args.device)
     logger.info("Hyperparameters: batch_size=%d, num_frames=%d, epochs=%d, lr=%.4f", 
-               batch_size, num_frames, epochs, learning_rate)
+    batch_size, num_frames, epochs, learning_rate)
 
-    # Load the pretrained pSp encoder
-    logger.info("Loading pretrained pSp encoder and 3D ResNet model.")
-    psp_path = "pixel2style2pixel/pretrained_models/psp_ffhq_encode.pt"
-    psp_model = load_psp_encoder(psp_path, args.device)
-    # Load the 3D ResNet model for content feature extraction
-    logger.info("Loading 3D ResNet model.")
-    content_model = load_resnet_module()
+    # Create directories for saving models and results
+    model_dir, checkpoint_dir = create_directories(args.output_dir)
 
     # Initialize the video preprocessor
     logger.info("Creating preprocessor.")
     preprocessor = DeepfakePreprocessor(
         face_size=face_size,
         video_size=video_size,
-        device=args.device,
-        content_model=content_model,
-        psp_model=psp_model
+        device=args.device
     )
 
 
@@ -115,7 +108,7 @@ def main():
         args.cache_dir,
         num_frames=num_frames,
         force_reprocess=args.force_reprocess,
-        max_videos_per_dir=20
+        max_videos_per_dir=250
     )
 
 
@@ -128,8 +121,6 @@ def main():
         batch_size=batch_size
     )
 
-    
-    
 
     # Initialize the DeepfakeDetector with loaded models and hyperparameters
     logger.info("Creating DeepfakeDetector model.")
@@ -151,11 +142,11 @@ def main():
         device=args.device,
         num_epochs=epochs,
         lr=learning_rate,
-        checkpoint_dir=args.checkpoint_dir
+        checkpoint_dir=checkpoint_dir
     )
 
     # Save final model
-    final_model_path = os.path.join(args.output_dir, 'final_model.pt')
+    final_model_path = os.path.join(model_dir, "final_model.pt")
     
     # Save the model state dict along with training metadata
     torch.save({

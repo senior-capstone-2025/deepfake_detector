@@ -14,7 +14,15 @@ from tqdm import tqdm
 from facenet_pytorch import MTCNN
 import logging
 
+import os
+import sys
+# Add the pixel2style2pixel directory to the Python path
+pixel2style2pixel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pixel2style2pixel')
+sys.path.append(pixel2style2pixel_path)
+
 logger = logging.getLogger(__name__)
+
+from utils.load_models import load_psp_encoder, load_resnet_module
 
 class DeepfakePreprocessor:
     """
@@ -24,14 +32,15 @@ class DeepfakePreprocessor:
                  face_size=(256, 256), 
                  video_size=(224, 224), 
                  device='cuda' if torch.cuda.is_available() else 'cpu',
-                 content_model=None,
-                 psp_model=None):
+                 psp_path="pixel2style2pixel/pretrained_models/psp_ffhq_encode.pt"):
         self.face_size = face_size
         self.video_size = video_size
         self.device = device
-        self.content_model = content_model.to(device)
-        self.psp_model = psp_model.to(device)
         
+        self.psp_model = load_psp_encoder(psp_path, device).to(device)
+        # Load the 3D ResNet model for content feature extraction
+        logger.info("Loading 3D ResNet model.")
+        self.content_model = load_resnet_module().to(device)
 
         # Load content model if provided
         if self.content_model is not None:

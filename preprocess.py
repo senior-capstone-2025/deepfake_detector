@@ -50,8 +50,8 @@ def preprocess_video_directory(
 
     # If max_videos_per_dir is specified, randomly select that many videos
     if max_videos_per_dir and len(videos) > max_videos_per_dir:
-        videos = random.sample(videos, max_videos_per_dir)
-        logger.info(f"Randomly selected {max_videos_per_dir} real videos for processing")
+        videos = videos[:max_videos_per_dir]
+        logger.info(f"Selected first {max_videos_per_dir} videos for processing")
     
     # Process each video
     for filename in tqdm(videos, desc=f"Processing videos in {os.path.basename(dir_path)}"):
