@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Import your custom modules
 from detector import DeepfakeDetector
 from dataset import create_dataloaders
-from preprocess_all_videos import preprocess_all_videos
+from utils.preprocess_all_videos import preprocess_all_videos
 
 import os
 from preprocessor import DeepfakePreprocessor

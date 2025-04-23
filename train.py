@@ -85,6 +85,9 @@ def train_model(
     logger.info(f"Training data: {len(train_loader)} batches")
     logger.info(f"Validation data: {len(val_loader)} batches")
     
+        
+    
+
     # Create directory for model checkpoints if it doesn't exist
     os.makedirs(checkpoint_dir, exist_ok=True)
     
@@ -124,7 +127,7 @@ def train_model(
     patience_counter = 0
 
     logger.info("Starting training loop")
-    
+
     for epoch in range(num_epochs):
         # Training phase
         model.train()
@@ -206,7 +209,7 @@ def train_model(
                     model.style_attention(style_hidden, content_features_batch),
                     content_features_batch
                 ], dim=1))
-                
+
             visualizer.update_batch(outputs, labels, features=fused_features)
 
             # Log batch loss occasionally
