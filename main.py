@@ -37,10 +37,10 @@ from train import train_model
 # Create logger
 logger = logging.getLogger(__name__)
 
-def create_directories(output_dir):
+def create_directories(output_dir, model_name):
     # Create a unique directory for the final model
     train_date = datetime.datetime.now().strftime("%m%d_%Hh%Mm%Ss")
-    model_dir = os.path.join(output_dir, f"{train_date}_model")
+    model_dir = os.path.join(output_dir, f"{train_date}_{model_name}")
     os.makedirs(model_dir, exist_ok=True)
     logger.info("Final model directory: %s", model_dir)
 
@@ -49,7 +49,12 @@ def create_directories(output_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
     logger.info(f"Checkpoint directory: {checkpoint_dir}")
 
-    return model_dir, checkpoint_dir
+    # Create directory for training visualization logs
+    visualizer_dir = os.path.join(model_dir, "visualization_logs")
+    os.makedirs(visualizer_dir, exist_ok=True)
+    logger.info(f"Visualization logs directory: {visualizer_dir}")
+
+    return model_dir, checkpoint_dir, visualizer_dir
 
 def main():
 
@@ -57,6 +62,8 @@ def main():
 
     # Argument parser to handle device selection
     parser = argparse.ArgumentParser(description='Train deepfake detection model')
+    # Details on what's currently being trained (e.g., model name)
+    parser.add_argument('--model_name', type=str, default='DeepfakeDetector', help='Name of the model being trained')
     # Paths to real and fake video directories: default for testing purposes
     parser.add_argument('--real_dir', type=str, default='./videos/real', help='Directory with real videos')
     parser.add_argument('--fake_dir', type=str, default='./videos/fake', help='Directory with fake videos')
@@ -76,37 +83,29 @@ def main():
     parser.add_argument('--include_evaluation', action='store_true', help='[FLAG] Make predictions on validation set after training')
     
     args = parser.parse_args()
-    logger.info("Arguments parsed: %s", args)
 
     # Video sizes
     face_size = (256, 256)
     video_size = (224, 224)
 
     # Hyperparameters
-    batch_size = 64
-    num_frames = 32
-    epochs = 100
+    batch_size = 16
+    num_frames = 64
+    epochs = 20
     learning_rate = 0.0001
 
-    # Log hyperparameters
-    logger.info("Using device: %s", args.device)
-    logger.info("Hyperparameters: batch_size=%d, num_frames=%d, epochs=%d, lr=%.4f", 
-    batch_size, num_frames, epochs, learning_rate)
-
+    
     # Create directories for saving models and results
-    model_dir, checkpoint_dir = create_directories(args.output_dir)
+    model_dir, checkpoint_dir, visualizer_dir = create_directories(args.output_dir, args.model_name)
 
     # Initialize the video preprocessor
-    logger.info("Creating preprocessor.")
     preprocessor = DeepfakePreprocessor(
         face_size=face_size,
         video_size=video_size,
-        device=args.device
+        device=args.device,
     )
 
-
     # Preprocess all videos in the specified directories
-    logger.info("Starting video preprocessing...")
     video_info = preprocess_all_videos(
         args.real_dir,
         args.fake_dir,
@@ -121,7 +120,6 @@ def main():
     # Create dataloaders for training and validation
     # The preprocessor will transform the videos into tensors on the first pass
     # and cache them for subsequent passes.
-    logger.info("Creating traing/validation dataloaders.")
     train_loader, val_loader = create_dataloaders(
         video_info,
         batch_size=batch_size
@@ -129,7 +127,6 @@ def main():
 
 
     # Initialize the DeepfakeDetector with loaded models and hyperparameters
-    logger.info("Creating DeepfakeDetector model.")
     detector = DeepfakeDetector(
         device=args.device,
         style_dim=512,          # W+ space dimension (only one layer of pSp style)
@@ -140,7 +137,6 @@ def main():
 
     
     # Train the deepfake detector
-    logger.info("Begin training.")
     trained_model, training_metadata = train_model(
         detector,
         train_loader,
@@ -148,7 +144,8 @@ def main():
         device=args.device,
         num_epochs=epochs,
         lr=learning_rate,
-        checkpoint_dir=checkpoint_dir
+        checkpoint_dir=checkpoint_dir,
+        visualizer_dir=visualizer_dir
     )
 
     # Save final model

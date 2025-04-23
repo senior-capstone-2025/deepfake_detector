@@ -28,7 +28,7 @@ from preprocess_all_videos import preprocess_all_videos
 import os
 from preprocessor import DeepfakePreprocessor
 
-def evaluate_model(model_dir, device, val_loader):
+def evaluate_model(model_dir, device, val_loader, eval_description="initial"):
     # Create output directory
     results_dir = os.path.join(model_dir, 'evaluation')
     os.makedirs(results_dir, exist_ok=True)
@@ -58,16 +58,15 @@ def evaluate_model(model_dir, device, val_loader):
             logger.info(f"  {key}: {checkpoint[key]}")
     
     eval_date = datetime.datetime.now().strftime("%m%d_%Hh%Mm%Ss")
-    eval_results_file = (eval_date + "_results.pt")
-    eval_text_file = (eval_date + "_summary.txt")
-    logger.info(f"Evaluation results will be saved to {eval_results_file} and {eval_text_file}")
+    eval_results_file = (eval_date + f"_{eval_description}_results.pt")
+    eval_summary_file = (eval_date + f"_{eval_description}_summary.txt")
 
     # Evaluate model
-    logger.info("Evaluating model")
+    logger.info("Begin evaluating model")
     results = make_predictions(model, val_loader, device)
     
     # Plot confusion matrix
-    plot_confusion_matrix(results['confusion_matrix'], results_dir)
+    plot_confusion_matrix(results['confusion_matrix'], results_dir, eval_description)
     
     # Save detailed results
     results_file = os.path.join(results_dir, eval_results_file)
@@ -75,7 +74,7 @@ def evaluate_model(model_dir, device, val_loader):
     logger.info(f"Detailed results saved to {results_file}")
     
     # Save text summary
-    summary_file = os.path.join(results_dir, eval_text_file)
+    summary_file = os.path.join(results_dir, eval_summary_file)
     with open(summary_file, 'w') as f:
         f.write("DEEPFAKE DETECTOR EVALUATION RESULTS\n")
         f.write("====================================\n\n")
@@ -163,7 +162,7 @@ def make_predictions(model, data_loader, device):
     
     return results
 
-def plot_confusion_matrix(cm, output_dir):
+def plot_confusion_matrix(cm, output_dir, eval_description):
     """
     Plot and save confusion matrix
     
@@ -182,8 +181,8 @@ def plot_confusion_matrix(cm, output_dir):
     
     # Save the figure
     os.makedirs(output_dir, exist_ok=True)
-    plt.savefig(os.path.join(output_dir, 'confusion_matrix.png'))
-    logger.info(f"Confusion matrix saved to {os.path.join(output_dir, 'confusion_matrix.png')}")
+    plt.savefig(os.path.join(output_dir, f'{eval_description}_cm.png'))
+    logger.info(f"Confusion matrix saved to {os.path.join(output_dir, f'{eval_description}_cm.png')}")
     plt.close()
 
 def main():
@@ -284,7 +283,6 @@ def main():
     torch.save(results, results_file)
     logger.info(f"Detailed results saved to {results_file}")
     
-
     # Save text summary
     summary_file = os.path.join(results_dir, eval_text_file)
     with open(summary_file, 'w') as f:

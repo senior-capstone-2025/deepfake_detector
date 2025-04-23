@@ -37,18 +37,9 @@ class DeepfakePreprocessor:
         self.video_size = video_size
         self.device = device
         
+        # Load psp encoder model and 3D ResNet
         self.psp_model = load_psp_encoder(psp_path, device).to(device)
-        # Load the 3D ResNet model for content feature extraction
-        logger.info("Loading 3D ResNet model.")
         self.content_model = load_resnet_module().to(device)
-
-        # Load content model if provided
-        if self.content_model is not None:
-            self.content_model.eval()
-
-        # Load PSP model if provided
-        if self.psp_model is not None:
-            self.psp_model.eval()
         
         # Initialize face detector (MTCNN)
         self.face_detector = MTCNN(
