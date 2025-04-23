@@ -16,7 +16,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("preprocess_train.log"),
+        logging.FileHandler("main.log"),
         logging.StreamHandler()
     ]
 )
@@ -27,6 +27,7 @@ warnings.filterwarnings("ignore", message="You are using `torch.load` with `weig
 
 # Import necessary utility functions
 from preprocess_all_videos import preprocess_all_videos
+from evaluate import evaluate_model
 # Import custom modules
 from preprocessor import DeepfakePreprocessor
 from detector import DeepfakeDetector
@@ -66,9 +67,14 @@ def main():
     parser.add_argument('--output_dir', type=str, default='trained_models', help='Directory to save results')
     # Cache directory
     parser.add_argument('--cache_dir', type=str, default='preprocessed_cache', help='Directory for preprocessed data')
-    # Force reprocessing
-    parser.add_argument('--force_reprocess', action='store_true', help='Force reprocessing of all videos (use when making changes to preprocessor)')
-   
+    # Maximum number of videos to process from each directory
+    parser.add_argument('--max_videos_per_dir', type=int, default=100,
+                       help='Maximum number of videos to process from each directory')
+    # FLAG: Force reprocessing
+    parser.add_argument('--force_reprocess', action='store_true', help='[FLAG] Force reprocessing of all videos (use when making changes to preprocessor)')
+    # FLAG: Include evaluation
+    parser.add_argument('--include_evaluation', action='store_true', help='[FLAG] Make predictions on validation set after training')
+    
     args = parser.parse_args()
     logger.info("Arguments parsed: %s", args)
 
@@ -79,8 +85,8 @@ def main():
     # Hyperparameters
     batch_size = 64
     num_frames = 32
-    epochs = 5
-    learning_rate = 0.001
+    epochs = 100
+    learning_rate = 0.0001
 
     # Log hyperparameters
     logger.info("Using device: %s", args.device)
@@ -108,7 +114,7 @@ def main():
         args.cache_dir,
         num_frames=num_frames,
         force_reprocess=args.force_reprocess,
-        max_videos_per_dir=252
+        max_videos_per_dir=args.max_videos_per_dir  # Limit for testing purposes
     )
 
 
@@ -163,6 +169,15 @@ def main():
     logger.info(f"Training complete. Final model saved to {final_model_path}")
     logger.info(f"Best model was from epoch {training_metadata['best_epoch']} with validation loss: {training_metadata['best_val_loss']:.4f}")
     logger.info(f"Total training time: {training_metadata['training_time']/60:.2f} minutes")
+
+    # If include_evaluation is set, evaluate the model on the validation set
+    if args.include_evaluation:
+        logger.info("Evaluating model on validation set.")
+        evaluate_model(
+            model_dir,
+            args.device,
+            val_loader
+        )
 
 if __name__ == "__main__":
     main()

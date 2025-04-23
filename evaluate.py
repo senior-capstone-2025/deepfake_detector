@@ -13,7 +13,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("evaluation.log"),
+        logging.FileHandler("evaluate.log"),
         logging.StreamHandler()
     ]
 )
@@ -28,7 +28,74 @@ from preprocess_all_videos import preprocess_all_videos
 import os
 from preprocessor import DeepfakePreprocessor
 
-def evaluate_model(model, data_loader, device):
+def evaluate_model(model_dir, device, val_loader):
+    # Create output directory
+    results_dir = os.path.join(model_dir, 'evaluation')
+    os.makedirs(results_dir, exist_ok=True)
+    
+    # Load the trained model
+    logger.info(f"Loading model from {model_dir}")
+    model_path = os.path.join(model_dir, 'final_model.pt')
+    checkpoint = torch.load(model_path, map_location=device)
+    
+    # Create model instance
+    model = DeepfakeDetector(
+        device=device,
+        style_dim=512,
+        content_dim=2048,
+        gru_hidden_size=1024,
+        output_dim=512
+    )
+    
+    # Load model weights
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model = model.to(device)
+    
+    # Log model info
+    logger.info(f"Model loaded. Training metadata:")
+    for key in ['training_complete', 'training_date', 'epochs_trained', 'best_epoch', 'best_val_loss']:
+        if key in checkpoint:
+            logger.info(f"  {key}: {checkpoint[key]}")
+    
+    eval_date = datetime.datetime.now().strftime("%m%d_%Hh%Mm%Ss")
+    eval_results_file = (eval_date + "_results.pt")
+    eval_text_file = (eval_date + "_summary.txt")
+    logger.info(f"Evaluation results will be saved to {eval_results_file} and {eval_text_file}")
+
+    # Evaluate model
+    logger.info("Evaluating model")
+    results = make_predictions(model, val_loader, device)
+    
+    # Plot confusion matrix
+    plot_confusion_matrix(results['confusion_matrix'], results_dir)
+    
+    # Save detailed results
+    results_file = os.path.join(results_dir, eval_results_file)
+    torch.save(results, results_file)
+    logger.info(f"Detailed results saved to {results_file}")
+    
+    # Save text summary
+    summary_file = os.path.join(results_dir, eval_text_file)
+    with open(summary_file, 'w') as f:
+        f.write("DEEPFAKE DETECTOR EVALUATION RESULTS\n")
+        f.write("====================================\n\n")
+        f.write(f"Model: {model_path}\n")
+        f.write(f"Evaluation date: {eval_date}\n\n")
+        f.write(f"Accuracy:  {results['accuracy']:.4f}\n\n")
+        f.write(f"- Fake -")
+        f.write(f"Precision: {results['precision']:.4f}\n")
+        f.write(f"Recall:    {results['recall']:.4f}\n")
+        f.write(f"F1 Score:  {results['f1_score']:.4f}\n\n")
+        f.write("Confusion Matrix:\n")
+        f.write(f"{results['confusion_matrix']}\n\n")
+        f.write("Classification Report:\n")
+        f.write(f"{results['classification_report']}\n")
+    
+    logger.info(f"Evaluation summary saved to {summary_file}")
+    logger.info("Evaluation complete!")
+
+
+def make_predictions(model, data_loader, device):
 
     model.eval()
     model = model.to(device)
@@ -190,14 +257,14 @@ def main():
         args.cache_dir,
         num_frames=args.num_frames,
         force_reprocess=False,
-        max_videos_per_dir=args.max_videos_per_dir
+        max_videos_per_dir=args.max_videos_per_dir,
     )
     
     # Create dataloader (using all data as validation)
     _, val_loader = create_dataloaders(
         video_info,
         batch_size=args.batch_size,
-        train_split=0  # Use all data for evaluation
+        train_split=0.8  # Use all data for evaluation
     )
     
     eval_date = datetime.datetime.now().strftime("%m%d_%Hh%Mm%Ss")
@@ -207,7 +274,7 @@ def main():
 
     # Evaluate model
     logger.info("Evaluating model")
-    results = evaluate_model(model, val_loader, args.device)
+    results = make_predictions(model, val_loader, args.device)
     
     # Plot confusion matrix
     plot_confusion_matrix(results['confusion_matrix'], results_dir)
@@ -217,7 +284,6 @@ def main():
     torch.save(results, results_file)
     logger.info(f"Detailed results saved to {results_file}")
     
-
 
     # Save text summary
     summary_file = os.path.join(results_dir, eval_text_file)

@@ -1,9 +1,9 @@
 #!/bin/sh
 
 python3 evaluate_model.py \
-    --model_dir /mnt/d/deepfake_detector/trained_models/0422_16h07m08s_model \
+    --model_dir /mnt/d/deepfake_detector/trained_models/0422_16h38m49s_model \
     --real_dir /mnt/d/deepfake_detector/deepfake_dataset/original_sequences \
     --fake_dir /mnt/d/deepfake_detector/deepfake_dataset/manipulated_sequences \
     --cache_dir /mnt/d/deepfake_detector/preprocessed_cache \
     --batch_size 32 \
-    --max_videos_per_dir 100
+    --max_videos_per_dir 500

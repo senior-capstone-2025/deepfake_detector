@@ -17,124 +17,179 @@ from torchvision import transforms
 import logging
 logger = logging.getLogger(__name__)
 
+# Enhance the StyleGRU module to capture more temporal dynamics
 class StyleGRU(nn.Module):
-    """
-    Simplified StyleGRU module to process style latent flows
-    """
-    def __init__(self, input_size=512, hidden_size=1024, num_layers=1, bidirectional=True):
+    def __init__(self, input_size=512, hidden_size=1024, num_layers=2, bidirectional=True):
         super(StyleGRU, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.num_directions = 2 if bidirectional else 1
-        self.dropout = nn.Dropout(0.2)
+        
+        # Add temporal convolution before GRU
+        self.temporal_conv = nn.Sequential(
+            nn.Conv1d(input_size, input_size, kernel_size=3, padding=1),
+            nn.BatchNorm1d(input_size),
+            nn.ReLU(),
+            nn.Conv1d(input_size, input_size, kernel_size=3, padding=1),
+            nn.BatchNorm1d(input_size),
+            nn.ReLU()
+        )
+        
+        self.dropout = nn.Dropout(0.3)  # Increased dropout
         self.gru = nn.GRU(
             input_size=input_size,
             hidden_size=hidden_size,
-            num_layers=num_layers,
+            num_layers=num_layers,  # Increased layers
             batch_first=True,
             bidirectional=bidirectional,
-            dropout=0.1 if num_layers > 1 else 0
+            dropout=0.2 if num_layers > 1 else 0
         )
         
     def forward(self, x):
         # x shape: [batch_size, seq_len, input_size]
+        batch_size, seq_len, input_size = x.shape
+        
+        # Apply temporal convolution
+        x_t = x.transpose(1, 2)  # [batch_size, input_size, seq_len]
+        x_t = self.temporal_conv(x_t)
+        x = x_t.transpose(1, 2)  # [batch_size, seq_len, input_size]
+        
         x = self.dropout(x)
         output, hidden = self.gru(x)
         
-        # Get the final hidden state
+        # Return both final hidden state and sequence output
         if self.num_directions == 2:
             # For bidirectional, concatenate the last hidden states from both directions
-            hidden = torch.cat([hidden[-2], hidden[-1]], dim=1)
+            final_hidden = torch.cat([hidden[-2], hidden[-1]], dim=1)
         else:
             # For unidirectional, just take the last hidden state
-            hidden = hidden[-1]
+            final_hidden = hidden[-1]
             
-        return hidden
+        return final_hidden, output
 
-
-class StyleAttention(nn.Module):
-    def __init__(self, style_dim, content_dim, output_dim=512):
-        super(StyleAttention, self).__init__()
+class MultiHeadStyleAttention(nn.Module):
+    def __init__(self, style_dim, content_dim, output_dim=512, num_heads=4):
+        super(MultiHeadStyleAttention, self).__init__()
         
-        self.query_proj = nn.Linear(content_dim, output_dim)
+        self.num_heads = num_heads
+        self.head_dim = output_dim // num_heads
+        self.scale = self.head_dim ** -0.5
+        
+        # Content dimension projection to match output_dim
+        self.content_proj = nn.Linear(content_dim, output_dim)
+        
+        # Multi-head projections
+        self.query_proj = nn.Linear(output_dim, output_dim)  # Query from projected content
         self.key_proj = nn.Linear(style_dim, output_dim)
         self.value_proj = nn.Linear(style_dim, output_dim)
-        self.output_proj = nn.Linear(output_dim, output_dim)
         
-    def forward(self, style_features, content_features):
+        # Output projection and layer norm
+        self.output_proj = nn.Linear(output_dim, output_dim)
+        self.layer_norm1 = nn.LayerNorm(output_dim)
+        self.layer_norm2 = nn.LayerNorm(output_dim)
+        
+        # Feed-forward network
+        self.ffn = nn.Sequential(
+            nn.Linear(output_dim, output_dim * 2),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(output_dim * 2, output_dim)
+        )
+        
+    def forward(self, style_features, content_features, style_seq=None):
+        batch_size = content_features.shape[0]
+        
+        # Project content features to match output_dim
+        content_proj = self.content_proj(content_features)
+        
         # Project features
-        query = self.query_proj(content_features)  # [batch_size, output_dim]
-        key = self.key_proj(style_features)        # [batch_size, output_dim]
-        value = self.value_proj(style_features)    # [batch_size, output_dim]
+        queries = self.query_proj(content_proj).view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
+        keys = self.key_proj(style_features).view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
+        values = self.value_proj(style_features).view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
         
         # Compute attention scores
-        attn_scores = torch.matmul(query, key.t())  # [batch_size, batch_size]
-        attn_scores = F.softmax(attn_scores, dim=1)  # Normalize across batch
+        attn_scores = torch.matmul(queries, keys.transpose(-1, -2)) * self.scale
+        attn_weights = F.softmax(attn_scores, dim=-1)
         
         # Apply attention
-        weighted_value = torch.matmul(attn_scores, value)
+        attended = torch.matmul(attn_weights, values).transpose(1, 2).reshape(batch_size, -1, self.num_heads * self.head_dim)
+        attended = self.output_proj(attended).squeeze(1)
         
-        # Project to output dimension 
-        output = self.output_proj(weighted_value)
+        # Residual connection and layer norm (now dimensions match)
+        attended = self.layer_norm1(attended + content_proj)
+        
+        # Feed forward network
+        output = self.layer_norm2(attended + self.ffn(attended))
         
         return output
-
+        
 class DeepfakeDetector(nn.Module):
-    """
-    Simplified Deepfake Detection model based on style latent flows
-    """
     def __init__(self, 
-                device,          # 3D ResNet for content features
-                style_dim=512,            # StyleGAN latent dimension
-                content_dim=2048,         # Content feature dimension from ResNet
-                gru_hidden_size=1024,     # GRU hidden dimension
-                output_dim=512):          # Output dimension for attention
+                device,
+                style_dim=512,
+                content_dim=2048,
+                gru_hidden_size=1024,
+                output_dim=512,
+                num_attn_heads=4):
         super(DeepfakeDetector, self).__init__()
         
         self.device = device
         
-        # StyleGRU module
+        # Improved StyleGRU module
         self.style_gru = StyleGRU(
             input_size=style_dim,
             hidden_size=gru_hidden_size,
-            num_layers=1,
+            num_layers=2,
             bidirectional=True
         )
         
-        # Style Attention Module
-        self.style_attention = StyleAttention(
-            style_dim=gru_hidden_size * 2,  # Bidirectional GRU
-            content_dim=content_dim,
-            output_dim=output_dim
+        # Temporal pooling for content features
+        self.content_temporal_pool = nn.Sequential(
+            nn.Conv1d(content_dim, content_dim, kernel_size=3, padding=1),
+            nn.BatchNorm1d(content_dim),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool1d(1)
         )
         
-        # Final classification layer
-        self.classifier = nn.Sequential(
-            nn.Linear(output_dim + content_dim, 256),
+        # Multi-Head Style Attention
+        self.style_attention = MultiHeadStyleAttention(
+            style_dim=gru_hidden_size * 2,  # Bidirectional GRU
+            content_dim=content_dim,
+            output_dim=output_dim,
+            num_heads=num_attn_heads
+        )
+        
+        # Additional feature fusion layer
+        self.fusion_layer = nn.Sequential(
+            nn.Linear(output_dim + content_dim, output_dim),
+            nn.LayerNorm(output_dim),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(256, 1),
+            nn.Dropout(0.3)
+        )
+        
+        # Final classification layers with residual connections
+        self.classifier = nn.Sequential(
+            nn.Linear(output_dim, 256),
+            nn.LayerNorm(256),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(256, 128),
+            nn.LayerNorm(128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, 64),
+            nn.LayerNorm(64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(64, 1),
             nn.Sigmoid()
         )
     
-    
     def forward(self, content_features, style_codes):
-        """
-        Forward pass of the deepfake detection model
-        
-        Args:
-            video_frames: Original video frames [batch_size, channels, time, height, width]
-            face_frames: Aligned face frames [batch_size, time, channels, height, width]
-        """
-
-        # Check shapes
-        logger.debug(f"Video frames shape: {content_features.shape}")
+        logger.debug(f"Content features shape: {content_features.shape}")
         logger.debug(f"Style codes shape: {style_codes.shape}")
 
         try:
-
-            # We have pre-computed style codes
-            logger.debug(f"Using pre-computed style codes: {style_codes.shape}")
             # Compute style flow from pre-computed codes
             batch_size, seq_len, dim = style_codes.shape
             if seq_len > 1:
@@ -145,20 +200,22 @@ class DeepfakeDetector(nn.Module):
         
             logger.debug(f"Style flow shape: {style_flow.shape}")
             
-            # Process style flow with StyleGRU
-            style_features = self.style_gru(style_flow)
-            logger.debug(f"Style features shape: {style_features.shape}")
+            # Process style flow with improved StyleGRU
+            style_hidden, style_seq = self.style_gru(style_flow)
+            logger.debug(f"Style hidden shape: {style_hidden.shape}")
+            logger.debug(f"Style sequence shape: {style_seq.shape}")
             
-            # Apply style attention
-            attended_features = self.style_attention(style_features, content_features)
+            # Apply multi-head style attention
+            attended_features = self.style_attention(style_hidden, content_features, style_seq)
             logger.debug(f"Attended features shape: {attended_features.shape}")
             
-            # Concatenate with content features for final classification
+            # Concatenate with content features and apply fusion
             combined_features = torch.cat([attended_features, content_features], dim=1)
-            logger.debug(f"Combined features shape: {combined_features.shape}")
+            fused_features = self.fusion_layer(combined_features)
+            logger.debug(f"Fused features shape: {fused_features.shape}")
             
             # Final classification
-            output = self.classifier(combined_features)
+            output = self.classifier(fused_features)
             logger.debug(f"Output shape: {output.shape}")
             
             return output
