@@ -35,7 +35,7 @@ class StyleGRU(nn.Module):
             nn.ReLU()
         )
         
-        self.dropout = nn.Dropout(0.3)  # Increased dropout
+        self.dropout = nn.Dropout(0.4)  # Increased dropout
         self.gru = nn.GRU(
             input_size=input_size,
             hidden_size=hidden_size,
@@ -92,7 +92,7 @@ class MultiHeadStyleAttention(nn.Module):
         self.ffn = nn.Sequential(
             nn.Linear(output_dim, output_dim * 2),
             nn.ReLU(),
-            nn.Dropout(0.1),
+            nn.Dropout(0.3),
             nn.Linear(output_dim * 2, output_dim)
         )
         
@@ -172,15 +172,15 @@ class DeepfakeDetector(nn.Module):
             nn.Linear(output_dim, 256),
             nn.LayerNorm(256),
             nn.ReLU(),
-            nn.Dropout(0.4),
+            nn.Dropout(0.5),
             nn.Linear(256, 128),
             nn.LayerNorm(128),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.4),
             nn.Linear(128, 64),
             nn.LayerNorm(64),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(0.3),
             nn.Linear(64, 1),
             nn.Sigmoid()
         )

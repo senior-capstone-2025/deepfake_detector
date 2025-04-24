@@ -84,7 +84,7 @@ def preprocess_video_directory(
 
     # If max_videos_per_dir is specified, randomly select that many videos
     if max_videos_per_dir and len(videos) > max_videos_per_dir:
-        random.see(42)
+        random.seed(42)
         videos = random.sample(videos, max_videos_per_dir)
         logger.info(f"Randomly selected {max_videos_per_dir} videos for processing")
     
