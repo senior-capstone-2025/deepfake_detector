@@ -30,19 +30,18 @@ class StyleGRU(nn.Module):
             nn.Conv1d(input_size, input_size, kernel_size=3, padding=1),
             nn.BatchNorm1d(input_size),
             nn.ReLU(),
-            nn.Conv1d(input_size, input_size, kernel_size=3, padding=1),
-            nn.BatchNorm1d(input_size),
-            nn.ReLU()
+            nn.Dropout(0.2)
         )
         
-        self.dropout = nn.Dropout(0.4)  # Increased dropout
+        self.dropout = nn.Dropout(0.3)  # Increased dropout
+
         self.gru = nn.GRU(
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=num_layers,  # Increased layers
             batch_first=True,
-            bidirectional=bidirectional,
-            dropout=0.2 if num_layers > 1 else 0
+            bidirectional=False,
+            dropout=0.1
         )
         
     def forward(self, x):
@@ -68,7 +67,7 @@ class StyleGRU(nn.Module):
         return final_hidden, output
 
 class MultiHeadStyleAttention(nn.Module):
-    def __init__(self, style_dim, content_dim, output_dim=512, num_heads=4):
+    def __init__(self, style_dim, content_dim, output_dim=512, num_heads=2):
         super(MultiHeadStyleAttention, self).__init__()
         
         self.num_heads = num_heads
@@ -130,7 +129,7 @@ class DeepfakeDetector(nn.Module):
                 content_dim=2048,
                 gru_hidden_size=1024,
                 output_dim=512,
-                num_attn_heads=4):
+                num_attn_heads=2):
         super(DeepfakeDetector, self).__init__()
         
         self.device = device
@@ -167,22 +166,14 @@ class DeepfakeDetector(nn.Module):
             nn.Dropout(0.3)
         )
         
-        # Final classification layers with residual connections
+        # Simple classification head
         self.classifier = nn.Sequential(
-            nn.Linear(output_dim, 256),
-            nn.LayerNorm(256),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(256, 128),
-            nn.LayerNorm(128),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(128, 64),
-            nn.LayerNorm(64),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(64, 1),
-            nn.Sigmoid()
+           nn.Linear(output_dim, 128),
+           nn.LayerNorm(128),
+           nn.ReLU(),
+           nn.Dropout(0.4),
+           nn.Linear(128, 1),            
+           nn.Sigmoid()
         )
     
     def forward(self, content_features, style_codes):

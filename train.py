@@ -67,9 +67,9 @@ def train_model(
     num_epochs=100, 
     lr=0.001, 
     checkpoint_dir='checkpoints',
-    weight_decay=1e-5,
+    weight_decay=1e-4,
     use_mixup=True,
-    mixup_alpha=0.2,
+    mixup_alpha=0.4,
     use_cosine_scheduler=True,
     early_stopping_patience=15,
     visualizer_dir='visualization_logs'
@@ -85,9 +85,6 @@ def train_model(
     logger.info(f"Training data: {len(train_loader)} batches")
     logger.info(f"Validation data: {len(val_loader)} batches")
     
-        
-    
-
     # Create directory for model checkpoints if it doesn't exist
     os.makedirs(checkpoint_dir, exist_ok=True)
     
