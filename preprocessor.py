@@ -1,7 +1,6 @@
 ## file: preprocessor.py
 #
-# DeepfakePreprocessor :
-# Preprocessing tasks for converting videos to tensors.
+# Preprocessor class for extracting frames and faces from videos.
 #
 ##
 
@@ -22,6 +21,7 @@ sys.path.append(pixel2style2pixel_path)
 
 logger = logging.getLogger(__name__)
 
+# Load the PSP encoder and 3D ResNet model
 from utils.load_models import load_psp_encoder, load_resnet_module
 
 class DeepfakePreprocessor:
@@ -46,19 +46,19 @@ class DeepfakePreprocessor:
             image_size=face_size[0],
             margin=40,
             device=device,
-            keep_all=False  # Only keep the largest face
+            keep_all=False
         )
         
-        # Transforms for preprocessing
+        # Use pSp model normalization for face images
         self.face_transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])  # StyleGAN normalization
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
         
-        # Use Kinetics dataset normalization for video frames (for 3D ResNet)
+        # Use Kinetics dataset normalization for video frames
         self.video_transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize([0.45, 0.45, 0.45], [0.225, 0.225, 0.225])  # Kinetics stats (updated)
+            transforms.Normalize([0.45, 0.45, 0.45], [0.225, 0.225, 0.225])
         ])
 
     def _extract_face(self, frame):
@@ -66,9 +66,9 @@ class DeepfakePreprocessor:
         Extract face from a single frame using MTCNN
         """
         # Convert to RGB if needed
-        if frame.shape[2] == 4:  # RGBA
+        if frame.shape[2] == 4:
             frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
-        elif frame.shape[2] == 1:  # Grayscale
+        elif frame.shape[2] == 1:
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
         elif frame.shape[2] == 3 and frame.dtype == np.uint8:
             # Check if already RGB or BGR
@@ -79,20 +79,21 @@ class DeepfakePreprocessor:
             # Detect face
             face = self.face_detector(frame)
             
+            # If face detection fails, use center crop
             if face is None:
-                # If face detection fails, use center crop
+                logger.debug("No face detected, using center crop")
                 h, w = frame.shape[:2]
                 min_dim = min(h, w)
                 top = (h - min_dim) // 2
                 left = (w - min_dim) // 2
                 face_img = frame[top:top + min_dim, left:left + min_dim]
                 face_img = cv2.resize(face_img, self.face_size)
+            # If face is detected, resize and normalize
             else:
-                # If face is detected as tensor, convert to numpy
                 if isinstance(face, torch.Tensor):
-                    # MTCNN returns normalized tensor
+                    # MTCNN normalized tensor
                     face_img = face.permute(1, 2, 0).cpu().numpy()
-                    # Denormalize
+                    # Denormalize tensor
                     face_img = (face_img * 255).astype(np.uint8)
                 else:
                     face_img = face
@@ -121,27 +122,29 @@ class DeepfakePreprocessor:
         Returns:
             Style codes tensor [T, 512]
         """
-            
+        
         seq_len = face_tensor.shape[0]
         style_codes = []
         
         with torch.no_grad():
+            # Loop through each frame
             for i in range(seq_len):
-                # Extract a single frame
-                frame = face_tensor[i].unsqueeze(0).to(self.device)  # [1, C, H, W]
+                # Extract a single frame [1, C, H, W]
+                frame = face_tensor[i].unsqueeze(0).to(self.device)
                 
                 # Extract style latent vector using only the encoder
                 codes = self.psp_model.encoder(frame)
                 
-                # Use only one latent level (e.g., level 9 which is in the middle)
+                # Use only one latent level (level 9 which is in the middle)
                 level_idx = 9
-                codes = codes[:, level_idx, :]  # Shape [1, 512]
+                # [1, 512]
+                codes = codes[:, level_idx, :]
                 
                 style_codes.append(codes.cpu().squeeze(0))
         
         # Stack style codes along sequence dimension
         if style_codes:
-            return torch.stack(style_codes, dim=0)  # [T, 512]
+            return torch.stack(style_codes, dim=0)
         else:
             logger.warning("No style codes extracted, returning None")
             return None
@@ -153,8 +156,8 @@ class DeepfakePreprocessor:
         
         with torch.no_grad():
             # Add batch dimension if it's missing
-            if len(video_tensor.shape) == 4:  # [C, T, H, W]
-                video_tensor = video_tensor.unsqueeze(0)  # [1, C, T, H, W]
+            if len(video_tensor.shape) == 4:
+                video_tensor = video_tensor.unsqueeze(0)
             
             # Move tensor to device
             video_tensor = video_tensor.to(self.device)
@@ -168,7 +171,6 @@ class DeepfakePreprocessor:
             # Apply global average pooling if needed
             if len(content_features.shape) > 2:
                 # If we have spatial dimensions remaining, apply pooling
-                # For SlowFast models, this might be [batch, channels, time, h, w]
                 dims_to_pool = list(range(2, len(content_features.shape)))
                 content_features = torch.mean(content_features, dim=dims_to_pool)
             

@@ -1,10 +1,14 @@
 #!/bin/sh
 
-# Set up virtual environment and install dependencies
+# This script install the dependencies for the deepfake detector project.
+
+# It is recommended to run this script in a virtual environment to avoid conflicts with other projects.
+
+# Conda:
 # conda env create -f deepfake_detector_env.yml
 # conda activate deepfake_detector
 
-# Can use pip instead of conda if you prefer
+# Pip:
 python3 -m venv deepfake_detector_env
 source deepfake_detector_env/bin/activate
 
@@ -26,4 +30,3 @@ cd pretrained_models
 pip install gdown
 # Download the pretrained weights
 gdown 1bMTNWkh5LArlaWSc_wa8VKyq2V42T2z0
-
