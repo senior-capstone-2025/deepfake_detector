@@ -288,8 +288,6 @@ class TrainingVisualizer:
         report += f"- **F1 Score**: {f1:.4f}\n"
         report += f"- **AUC-ROC**: {auc:.4f}\n\n"
         
-        # Add more sections as needed
-        
         # Save report to a file
         report_path = os.path.join(self.log_dir, f'epoch_{epoch}_report.md')
         with open(report_path, 'w') as f:

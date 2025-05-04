@@ -1,8 +1,8 @@
 ## file: dataset.py
 #
-# DeepfakeDataset :
 # Create dataloader and cached dataset for deepfake detection.
 # https://www.kaggle.com/datasets/sanikatiwarekar/deep-fake-detection-dfd-entire-original-dataset
+#
 ##
 
 import os
@@ -50,12 +50,11 @@ class CachedDeepfakeDataset(Dataset):
         # Return empty tensors for invalid samples
         logger.warning(f"Invalid sample at index {idx}, returning empty tensors.")
         return (
-            torch.zeros((3, 32, 224, 224)),  # Default shape for video tensor
-            None,  # No style codes
+            torch.zeros((3, 32, 224, 224)),
+            None,
             torch.tensor(label, dtype=torch.float32),
             False
         )
-
 
 def create_dataloaders(video_info, batch_size=8, train_split=0.8):
     """
@@ -91,7 +90,7 @@ def create_dataloaders(video_info, batch_size=8, train_split=0.8):
     logger.info(f"Validation dataset size: {len(val_dataset)}")
     
     if train_split != 0:
-        # Create dataloaders
+        # Create training dataloader if train_split is not 0
         train_loader = DataLoader(
             train_dataset, 
             batch_size=batch_size, 
@@ -102,6 +101,7 @@ def create_dataloaders(video_info, batch_size=8, train_split=0.8):
     else:
         train_loader = None
     
+    # Create validation dataloader
     val_loader = DataLoader(
         val_dataset, 
         batch_size=batch_size, 
@@ -114,8 +114,17 @@ def create_dataloaders(video_info, batch_size=8, train_split=0.8):
 
 
 def collate_with_filter(batch):
-    """Custom collate function to filter out invalid samples"""
-    valid_samples = [item for item in batch if item[3]]  # Check valid flag
+    """
+    Custom collate function to filter out invalid samples
+    
+    Args:
+        batch: List of tuples (video_tensor, style_codes, label, is_valid)
+        
+    Returns:
+        Tuple of stacked tensors (content_features, style_codes, labels)
+    """
+    
+    valid_samples = [item for item in batch if item[3]]
     
     if not valid_samples:
         # Return empty batch if no valid samples

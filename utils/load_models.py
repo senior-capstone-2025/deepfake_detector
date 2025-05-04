@@ -8,9 +8,8 @@ import torch
 from argparse import Namespace
 import torchvision.transforms as transforms
 import pytorchvideo.models.resnet as resnet
-
-# Setup logging
 import logging
+
 logger = logging.getLogger(__name__)
 
 # Import pSp model
@@ -19,7 +18,15 @@ from pixel2style2pixel.models.psp import pSp
 def load_psp_encoder(model_path, device):
     """
     Load the pretrained pSp encoder model
+    
+    Args:
+        model_path (str): Path to the pretrained pSp model checkpoint.
+        device (str): Device to load the model on (e.g., 'cuda' or 'cpu').
+    
+    Returns:
+        net (torch.nn.Module): The loaded pSp model.
     """
+    
     # Load the checkpoint
     ckpt = torch.load(model_path, map_location='cpu')
     
@@ -51,14 +58,9 @@ def load_resnet_module():
     """
     Load the pretrained 3D ResNet model from PyTorchVideo
     """
-    # Import the model from torch hub
+    
     try:
         model = torch.hub.load('facebookresearch/pytorchvideo', 'slow_r50', pretrained=True)
-        
-        # Access the model's trunk (feature extractor without the classification head)
-        # The SlowFast models often have a 'blocks' attribute followed by a head
-        # We want to extract features before the final classification layer
-        
         class FeatureExtractor(torch.nn.Module):
             def __init__(self, model):
                 super().__init__()

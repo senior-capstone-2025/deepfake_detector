@@ -14,7 +14,6 @@ import logging
 import matplotlib.pyplot as plt
 from utils.training_visualizer import TrainingVisualizer
 
-# Create logger
 logger = logging.getLogger(__name__)
 
 def mixup_data(x1, x2, y, alpha=0.2, device='cuda'):
@@ -25,11 +24,14 @@ def mixup_data(x1, x2, y, alpha=0.2, device='cuda'):
         x1: Content features
         x2: Style features
         y: Labels
-        alpha: Mixup alpha parameter
+        alpha: Mixup alpha parameter,
+        device: Device to perform operations on
         
     Returns:
         Mixed content features, mixed style features, mixed labels
     """
+    
+    # Sample interpolation coefficient from beta distribution
     if alpha > 0:
         lam = np.random.beta(alpha, alpha)
     else:
@@ -57,6 +59,8 @@ def mixup_criterion(criterion, pred, y_a, y_b, lam):
     Returns:
         Mixed loss
     """
+    
+    # Calculate the loss using the mixup formula
     return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
 
 def train_model(
@@ -74,7 +78,27 @@ def train_model(
     early_stopping_patience=15,
     visualizer_dir='visualization_logs'
 ):
-    """Train the deepfake detection model with improved techniques"""
+    """
+    Train the deepfake detection model
+    
+    Args:
+        model: The model to train
+        train_loader: DataLoader for training data
+        val_loader: DataLoader for validation data
+        device: Device to train on (e.g., 'cuda' or 'cpu')
+        num_epochs: Number of epochs to train
+        lr: Learning rate
+        checkpoint_dir: Directory to save checkpoints
+        weight_decay: Weight decay for optimizer
+        use_mixup: Whether to use mixup augmentation
+        mixup_alpha: Alpha parameter for mixup
+        use_cosine_scheduler: Whether to use cosine annealing scheduler
+        early_stopping_patience: Patience for early stopping
+        visualizer_dir: Directory for visualization logs
+        
+    Returns:
+        model: Trained model
+    """
     
     # Log training start information
     logger.info(f"Begin training model on device: {device}")
@@ -106,9 +130,9 @@ def train_model(
         # Cosine annealing with warm restarts
         scheduler = CosineAnnealingWarmRestarts(
             optimizer, 
-            T_0=10,  # Restart every 10 epochs
-            T_mult=2,  # Double the restart interval after each restart
-            eta_min=lr/100  # Minimum learning rate
+            T_0=10,
+            T_mult=2,
+            eta_min=lr/100
         )
         scheduler_type = "cosine"
     else:
@@ -152,8 +176,8 @@ def train_model(
             style_codes_batch = style_codes_batch.to(device)
             labels = labels.to(device)
             
-            # Apply mixup if enabled (only during training)
-            if use_mixup and np.random.random() < 0.7:  # Apply mixup with 70% probability
+            # Apply mixup if enabled (70% batches mixed, 30% not)
+            if use_mixup and np.random.random() < 0.7:
                 content_features_batch, style_codes_batch, labels_a, labels_b, lam = mixup_data(
                     content_features_batch, style_codes_batch, labels, mixup_alpha, device
                 )
@@ -183,7 +207,7 @@ def train_model(
             train_loss += loss.item() * content_features_batch.size(0)
             
             if mixup_applied:
-                # For accuracy during mixup, we use the dominant label
+                # For accuracy during mixup, use the dominant label
                 mixed_labels = lam * labels_a + (1 - lam) * labels_b
                 predictions = (outputs > 0.5).float()
                 train_correct += ((predictions > 0.5) == (mixed_labels > 0.5)).sum().item()

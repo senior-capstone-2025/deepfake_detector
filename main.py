@@ -2,12 +2,19 @@
 #
 # Main training and evaluation script for deepfake detector.
 #
+# This script handles the entire pipeline for the model:
+# 1. Preprocessing & caching videos
+# 2. Creating dataloaders
+# 3. Training the model
+# 4. Evaluating the model
+#
 ##
 
 import time
 import datetime
 import argparse
 import os
+import sys
 import numpy as np
 import torch
 import logging
@@ -20,16 +27,13 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-import sys
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# Create logger
-logger = logging.getLogger(__name__)
-
 # Suppress PyTorch future version warnings
 import warnings
 warnings.filterwarnings("ignore", message="You are using `torch.load` with `weights_only=False`")
+# Create logger
+logger = logging.getLogger(__name__)
 
 # Import necessary utility functions
 from utils.preprocess_all_videos import preprocess_all_videos

@@ -6,6 +6,8 @@
 #
 ##
 
+import os
+import sys
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,17 +24,10 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-
 logger = logging.getLogger(__name__)
 
-
-
-import os
-
-import sys
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 
 # Import necessary utility functions
 from utils.preprocess_all_videos import preprocess_all_videos
@@ -195,95 +190,6 @@ class ModelAnalyzer:
             logger.info(f"Confusion matrix saved to {save_path}")
         
         plt.close()
-    
-    def analyze_failure_cases(self, results, val_loader, num_samples=5, save_dir=None):
-        """
-        Analyze failure cases
-        
-        Args:
-            results: Analysis results from analyze_validation_set
-            val_loader: Validation data loader
-            num_samples: Number of samples to analyze
-            save_dir: Directory to save analysis results
-        """
-        incorrect_indices = results['incorrect_indices']
-        
-        if not incorrect_indices:
-            logger.warning("No incorrect predictions found")
-            return
-        
-        # Limit number of samples
-        num_samples = min(num_samples, len(incorrect_indices))
-        
-        # Select random samples from incorrect predictions
-        selected_indices = np.random.choice(incorrect_indices, num_samples, replace=False)
-        
-        logger.info(f"Analyzing {num_samples} failure cases")
-        
-        # Create save directory if specified
-        if save_dir:
-            os.makedirs(save_dir, exist_ok=True)
-        
-        # Analyze each selected sample
-        for i, idx in enumerate(selected_indices):
-            # Calculate batch index and item index
-            batch_idx = idx // val_loader.batch_size
-            item_idx = idx % val_loader.batch_size
-            
-            # Get batch
-            batch_counter = 0
-            for batch in val_loader:
-                if batch_counter == batch_idx:
-                    if batch is None:
-                        logger.warning(f"Batch {batch_idx} is None, skipping")
-                        continue
-                    
-                    content_features, style_codes, labels = batch
-                    
-                    # Check if item_idx is valid
-                    if item_idx >= content_features.shape[0]:
-                        logger.warning(f"Item index {item_idx} out of range for batch size {content_features.shape[0]}")
-                        continue
-                    
-                    # Extract sample
-                    content_feature = content_features[item_idx:item_idx+1].to(self.device)
-                    style_code = style_codes[item_idx:item_idx+1].to(self.device)
-                    label = labels[item_idx:item_idx+1].to(self.device)
-                    
-                    # Get prediction
-                    with torch.no_grad():
-                        output = self.model(content_feature, style_code)
-                        prediction = output.squeeze().item()
-                    
-                    # Analyze feature importance
-                    importance_scores = self._analyze_feature_importance(content_feature, style_code)
-                    
-                    # Log analysis
-                    logger.info(f"Failure case {i+1}/{num_samples}:")
-                    logger.info(f"  True label: {'Fake' if label.item() > 0.5 else 'Real'}")
-                    logger.info(f"  Prediction: {prediction:.4f} ({'Fake' if prediction > 0.5 else 'Real'})")
-                    
-                    # Save analysis if specified
-                    if save_dir:
-                        # Plot feature importance
-                        plt.figure(figsize=(12, 6))
-                        plt.bar(range(len(importance_scores)), importance_scores)
-                        plt.xlabel('Feature Index')
-                        plt.ylabel('Importance Score')
-                        plt.title(f"Feature Importance - Sample {i+1}")
-                        plt.savefig(os.path.join(save_dir, f"failure_case_{i+1}_importance.png"))
-                        plt.close()
-                        
-                        # Save analysis summary
-                        with open(os.path.join(save_dir, f"failure_case_{i+1}_summary.txt"), 'w') as f:
-                            f.write(f"Failure Case {i+1}/{num_samples}\n")
-                            f.write(f"True label: {'Fake' if label.item() > 0.5 else 'Real'}\n")
-                            f.write(f"Prediction: {prediction:.4f} ({'Fake' if prediction > 0.5 else 'Real'})\n")
-                            f.write(f"Top 5 important features: {np.argsort(importance_scores)[-5:][::-1]}\n")
-                    
-                    break
-                
-                batch_counter += 1
     
     def _analyze_feature_importance(self, content_feature, style_code):
         """
@@ -524,15 +430,6 @@ class ModelAnalyzer:
             save_path=os.path.join(output_dir, 'style_patterns.png')
         )
         
-        # # Analyze failure cases
-        # failure_dir = os.path.join(output_dir, 'failure_cases')
-        # self.analyze_failure_cases(
-        #     results,
-        #     val_loader,
-        #     num_samples=5,
-        #     save_dir=failure_dir
-        # )
-        
         # Generate summary report
         self._generate_summary_report(results, output_dir)
         
@@ -604,22 +501,6 @@ class ModelAnalyzer:
         
         logger.info(f"Analysis report saved to {report_path}")
 
-
-# Usage example:
-'''
-# Initialize the analyzer
-analyzer = ModelAnalyzer(model, device='cuda', output_dir='model_analysis')
-
-# Run comprehensive analysis
-results = analyzer.run_comprehensive_analysis(val_loader)
-
-# Or run individual analyses:
-# results = analyzer.analyze_validation_set(val_loader)
-# analyzer.visualize_confusion_matrix(results, save_path='confusion_matrix.png')
-# analyzer.visualize_decision_boundaries(results, save_path='decision_boundaries.png')
-# analyzer.analyze_style_temporal_patterns(results, save_path='style_patterns.png')
-# analyzer.analyze_failure_cases(results, val_loader, num_samples=5, save_dir='failure_cases')
-'''
 
 def main():
     # Assuming pretrained model
