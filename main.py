@@ -20,6 +20,10 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+import sys
+# Add the parent directory to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # Create logger
 logger = logging.getLogger(__name__)
 

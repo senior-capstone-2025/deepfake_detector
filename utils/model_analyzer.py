@@ -6,7 +6,6 @@
 #
 ##
 
-import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,9 +13,34 @@ from sklearn.metrics import confusion_matrix, roc_curve, precision_recall_curve
 import seaborn as sns
 from captum.attr import IntegratedGradients, GradientShap, Occlusion
 import logging
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("evaluate.log"),
+        logging.StreamHandler()
+    ]
+)
 
 logger = logging.getLogger(__name__)
 
+
+
+import os
+
+import sys
+# Add the parent directory to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+
+# Import necessary utility functions
+from utils.preprocess_all_videos import preprocess_all_videos
+
+# Import custom modules
+from preprocessor import DeepfakePreprocessor
+from detector import DeepfakeDetector
+from dataset import create_dataloaders
 
 class ModelAnalyzer:
     def __init__(self, model, device='cuda', output_dir='model_analysis'):
@@ -273,6 +297,9 @@ class ModelAnalyzer:
             Importance scores for each feature
         """
         try:
+            was_training = self.model.training
+            self.model.train()
+            
             # Define a wrapper function for the model that returns scalar outputs
             def model_wrapper(content, style):
                 output = self.model(content, style)
@@ -299,6 +326,10 @@ class ModelAnalyzer:
             logger.error(f"Content feature shape: {content_feature.shape}, Style code shape: {style_code.shape}")
             # Return dummy importance scores instead of None
             return np.ones((content_feature.shape[1],))  # Return dummy scores based on feature dimension
+        finally:
+            # Restore to original mode
+            if not was_training:
+                self.model.eval()
         
     def visualize_decision_boundaries(self, results, save_path=None):
         """
@@ -493,14 +524,14 @@ class ModelAnalyzer:
             save_path=os.path.join(output_dir, 'style_patterns.png')
         )
         
-        # Analyze failure cases
-        failure_dir = os.path.join(output_dir, 'failure_cases')
-        self.analyze_failure_cases(
-            results,
-            val_loader,
-            num_samples=5,
-            save_dir=failure_dir
-        )
+        # # Analyze failure cases
+        # failure_dir = os.path.join(output_dir, 'failure_cases')
+        # self.analyze_failure_cases(
+        #     results,
+        #     val_loader,
+        #     num_samples=5,
+        #     save_dir=failure_dir
+        # )
         
         # Generate summary report
         self._generate_summary_report(results, output_dir)
@@ -589,3 +620,76 @@ results = analyzer.run_comprehensive_analysis(val_loader)
 # analyzer.analyze_style_temporal_patterns(results, save_path='style_patterns.png')
 # analyzer.analyze_failure_cases(results, val_loader, num_samples=5, save_dir='failure_cases')
 '''
+
+def main():
+    # Assuming pretrained model
+    model_path = '/mnt/d/deepfake_detector/trained_models/0424_20h47m28s_CDF64f16b/final_model.pt'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    num_frames = 64
+    batch_size = 32
+    real_dir = '/mnt/d/deepfake_detector/dfdc/dfdc_train_part_00/dfdc_train_part_0/'
+    fake_dir = '/mnt/d/deepfake_detector/dfdc/dfdc_train_part_00/dfdc_train_part_0/'
+    cache_dir = '/mnt/d/deepfake_detector/eval/cacheCDF64'
+    metadata_file = '/mnt/d/deepfake_detector/dfdc/dfdc_train_part_00/dfdc_train_part_0/metadata.json'
+    analysis_dir = '/mnt/d/deepfake_detector/evaluating-dfdc/CDF64'
+    
+    os.makedirs(analysis_dir, exist_ok=True)
+    
+    # Initialize preprocessor
+    logger.info("Creating preprocessor")
+    face_size = (256, 256)
+    video_size = (224, 224)
+    preprocessor = DeepfakePreprocessor(
+        face_size=face_size,
+        video_size=video_size,
+        device=device
+    )
+
+    # Preprocess all videos, load/store from cache
+    logger.info("Starting video preprocessing")
+    video_info = preprocess_all_videos(
+        real_dir,
+        fake_dir,
+        preprocessor,
+        cache_dir,
+        num_frames=num_frames,
+        force_reprocess=False,
+        max_videos_per_dir=40,
+        metadata_file=metadata_file
+    )
+    
+    # Create dataloaders for training and validation
+    logger.info("Creating dataloaders")
+    _, val_loader = create_dataloaders(
+        video_info,
+        batch_size=batch_size,
+        train_split=0
+    )
+    
+    # Initialize model
+    logger.info("Creating DeepfakeDetector model")
+    model = DeepfakeDetector(
+        device=device,
+        style_dim=512,
+        content_dim=2048,
+        gru_hidden_size=1024,
+        output_dim=512
+    )
+    
+    model = model.to(device)
+    
+    logger.info(f"Loading model from {model_path}")
+    checkpoint = torch.load(model_path, map_location=device)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    
+    analyzer = ModelAnalyzer(model, device=device, output_dir=analysis_dir)
+    
+    analysis_results = analyzer.run_comprehensive_analysis(val_loader, output_dir=analysis_dir)
+    
+    # Print analysis summary
+    metrics = analysis_results['metrics']
+    logger.info(f"Analysis complete. Accuracy: {metrics['accuracy']:.4f}, Precision: {metrics['precision']:.4f}, Recall: {metrics['recall']:.4f}, F1: {metrics['f1']:.4f}")
+    logger.info(f"Analysis results saved to {analysis_dir}")
+
+if __name__ == "__main__":
+    main()

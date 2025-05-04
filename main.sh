@@ -3,11 +3,11 @@
 # This script runs the deepfake detector training script with the specified parameters.
 
 # Directory locations for combined dataset
-model_name = "CombinedDataset"
-real_dir = "/mnt/d/deepfake_detector/combined_dataset/real"
-fake_dir = "/mnt/d/deepfake_detector/combined_dataset/fake"
-output_dir = "/mnt/d/deepfake_detector/trained_models"
-cache_dir = "/mnt/d/deepfake_detector/combined_cache"
+model_name="CombinedDatasetv2"
+real_dir="/mnt/d/deepfake_detector/combined_dataset/real"
+fake_dir="/mnt/d/deepfake_detector/combined_dataset/fake"
+output_dir="/mnt/d/deepfake_detector/trained_models"
+cache_dir="/mnt/d/deepfake_detector/combined_cache"
 
 # Directory locations for FaceForensics dataset
 # model_name = "FF32f32b"
@@ -31,7 +31,7 @@ python3 main.py \
     --cache_dir $cache_dir \
     --max_videos_per_dir 1300 \
     --num_epochs 100 \
-    --batch_size 64 \
+    --batch_size 32 \
     --learning_rate 0.00005 \
     --weight_decay 1e-4 \
     --num_frames 64 \

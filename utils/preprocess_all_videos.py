@@ -10,6 +10,7 @@ import logging
 import time
 from glob import glob
 import random
+import json
 
 from tqdm import tqdm
 from preprocessor import DeepfakePreprocessor
@@ -54,7 +55,9 @@ def preprocess_video_directory(
     label, 
     num_frames=64, 
     force_reprocess=False,
-    max_videos_per_dir=None
+    max_videos_per_dir=None,
+    metadata_file=None,
+    metadata_label=None
 ):
     """
     Preprocess all videos in a directory and save to cache
@@ -76,9 +79,23 @@ def preprocess_video_directory(
     video_info = []
     video_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm']
     
-    # Find all videos
-    videos = [f for f in os.listdir(dir_path) 
-              if any(f.lower().endswith(ext) for ext in video_extensions)]
+    if metadata_file:
+        with open(metadata_file, 'r') as f:
+            metadata = json.load(f)
+        videos = []
+        for filename, info in metadata.items():
+            if info['label'] == metadata_label:
+                video_path = os.path.join(dir_path, filename)
+                if os.path.exists(video_path):
+                    videos.append((video_path))
+                else:
+                    logger.warning(f"Video {video_path} not found in directory {dir_path}")
+    
+    else:
+        # Find all videos
+        videos = [f for f in os.listdir(dir_path) 
+                if any(f.lower().endswith(ext) for ext in video_extensions)]
+    
     
     logger.info(f"Found {len(videos)} videos in {dir_path}")
 
@@ -88,17 +105,13 @@ def preprocess_video_directory(
         videos = random.sample(videos, max_videos_per_dir)
         logger.info(f"Randomly selected {max_videos_per_dir} videos for processing")
     
-    # # If max_videos_per_dir is specified, randomly select that many videos
-    # if max_videos_per_dir and len(videos) > max_videos_per_dir:
-    #     videos = videos[:max_videos_per_dir]
-    #     logger.info(f"Selected first {max_videos_per_dir} videos for processing")
-    
-
     # Process each video
     for filename in tqdm(videos, desc=f"Processing videos in {os.path.basename(dir_path)}"):
         video_path = os.path.join(dir_path, filename)
         cache_key = os.path.basename(video_path).replace('.', '_')
         cache_path = os.path.join(cache_dir, f"{cache_key}.pt")
+        
+        
         
         # Skip if already cached
         if os.path.exists(cache_path) and not force_reprocess:
@@ -136,7 +149,7 @@ def preprocess_video_directory(
 
 
 
-def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frames=32, force_reprocess=False, max_videos_per_dir=None):
+def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frames=32, force_reprocess=False, max_videos_per_dir=None, metadata_file=None):
     """
     Preprocess all real and fake videos and return metadata for dataset creation
     
@@ -169,7 +182,9 @@ def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frame
         label=0,  # 0 = real
         num_frames=num_frames,
         force_reprocess=force_reprocess,
-        max_videos_per_dir=max_videos_per_dir
+        max_videos_per_dir=max_videos_per_dir,
+        metadata_file=metadata_file,
+        metadata_label='REAL'
     )
     
     # Process fake videos
@@ -181,7 +196,9 @@ def preprocess_all_videos(real_dir, fake_dir, preprocessor, cache_dir, num_frame
         label=1,  # 1 = fake
         num_frames=num_frames,
         force_reprocess=force_reprocess,
-        max_videos_per_dir=max_videos_per_dir
+        max_videos_per_dir=max_videos_per_dir,
+        metadata_file=metadata_file,
+        metadata_label='FAKE'
     )
     
     # Combine and return all video info
